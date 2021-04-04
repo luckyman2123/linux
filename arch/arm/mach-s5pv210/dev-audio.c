@@ -12,6 +12,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/gpio.h>
 
+#include <mach/regs-gpio.h>
+#include <mach/regs-clock.h>
 #include <plat/gpio-cfg.h>
 #include <plat/audio.h>
 
@@ -166,6 +168,22 @@ static int s5pv210_pcm_cfg_gpio(struct platform_device *pdev)
 	switch (pdev->id) {
 	case 0:
 		s3c_gpio_cfgpin_range(S5PV210_GPI(0), 5, S3C_GPIO_SFN(3));
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_I2S1_MCLK
+		u32 tmp;
+		// i2s1 GPIO configurations
+		s3c_gpio_cfgpin_range(S5PV210_GPC0(0), 5, S3C_GPIO_SFN(2));
+		
+		//i2s1 enable clock
+		tmp = __raw_readl(S5P_CLKGATE_IP3);
+		tmp = tmp | S5P_CLKGATE_IP3_I2S1;
+		__raw_writel(tmp, S5P_CLKGATE_IP3);
+		
+		//i2s1 src clock is EPLL
+		tmp = __raw_readl(S5P_CLK_SRC6);
+		tmp = tmp & ~(0xf<<4);
+		tmp = tmp | (0x7<<4);
+		__raw_writel(tmp, S5P_CLK_SRC6);
+#endif
 		break;
 	case 1:
 		s3c_gpio_cfgpin_range(S5PV210_GPC0(0), 5, S3C_GPIO_SFN(3));

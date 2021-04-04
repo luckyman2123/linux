@@ -632,7 +632,9 @@ static void fbcon_prepare_logo(struct vc_data *vc, struct fb_info *info,
 		vc->vc_pos += logo_lines * vc->vc_size_row;
 		kfree(save);
 	}
-
+#if defined(CONFIG_FB_S3C_LCD800600)
+	vc->vc_bottom += 1;
+#endif
 	if (logo_lines > vc->vc_bottom) {
 		logo_shown = FBCON_LOGO_CANSHOW;
 		printk(KERN_INFO

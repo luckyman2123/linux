@@ -156,9 +156,9 @@
 
 struct fb_fix_screeninfo {
 	char id[16];			/* identification string eg "TT Builtin" */
-	unsigned long smem_start;	/* Start of frame buffer mem */
+	unsigned long smem_start;	/* Start of frame buffer mem  物理显存起始地址*/
 					/* (physical address) */
-	__u32 smem_len;			/* Length of frame buffer mem */
+	__u32 smem_len;			/* Length of frame buffer mem 物理显存大小*/
 	__u32 type;			/* see FB_TYPE_*		*/
 	__u32 type_aux;			/* Interleave for interleaved Planes */
 	__u32 visual;			/* see FB_VISUAL_*		*/ 
@@ -238,14 +238,14 @@ struct fb_bitfield {
 #define KHZ2PICOS(a) (1000000000UL/(a))
 
 struct fb_var_screeninfo {
-	__u32 xres;			/* visible resolution		*/
-	__u32 yres;
+	__u32 xres;			/* visible resolution 可见分辨率*/
+	__u32 yres;			
 	__u32 xres_virtual;		/* virtual resolution		*/
 	__u32 yres_virtual;
 	__u32 xoffset;			/* offset from virtual to visible */
 	__u32 yoffset;			/* resolution			*/
 
-	__u32 bits_per_pixel;		/* guess what			*/
+	__u32 bits_per_pixel;		/* guess what 每个像素点占多少位*/
 	__u32 grayscale;		/* != 0 Graylevels instead of colors */
 
 	struct fb_bitfield red;		/* bitfield in fb mem if true color, */
@@ -837,8 +837,8 @@ struct fb_info {
 	int flags;
 	struct mutex lock;		/* Lock for open/release/ioctl funcs */
 	struct mutex mm_lock;		/* Lock for fb_mmap and smem_* fields */
-	struct fb_var_screeninfo var;	/* Current var */
-	struct fb_fix_screeninfo fix;	/* Current fix */
+	struct fb_var_screeninfo var;	/* Current var 可变参数 */
+	struct fb_fix_screeninfo fix;	/* Current fix 固定参数*/
 	struct fb_monspecs monspecs;	/* Current Monitor specs */
 	struct work_struct queue;	/* Framebuffer event queue */
 	struct fb_pixmap pixmap;	/* Image hardware mapper */
@@ -862,15 +862,15 @@ struct fb_info {
 	struct fb_deferred_io *fbdefio;
 #endif
 
-	struct fb_ops *fbops;
+	struct fb_ops *fbops; //操作方法
 	struct device *device;		/* This is the parent */
 	struct device *dev;		/* This is this fb device */
 	int class_flag;                    /* private sysfs flags */
 #ifdef CONFIG_FB_TILEBLITTING
 	struct fb_tile_ops *tileops;    /* Tile Blitting */
 #endif
-	char __iomem *screen_base;	/* Virtual address */
-	unsigned long screen_size;	/* Amount of ioremapped VRAM or 0 */ 
+	char __iomem *screen_base;	/* Virtual address 内核显存虚拟地址*/
+	unsigned long screen_size;	/* Amount of ioremapped VRAM or 0 虚拟显存大小*/ 
 	void *pseudo_palette;		/* Fake palette of 16 colors */ 
 #define FBINFO_STATE_RUNNING	0
 #define FBINFO_STATE_SUSPENDED	1

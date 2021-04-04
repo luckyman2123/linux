@@ -405,6 +405,7 @@ void driver_detach(struct device_driver *drv)
  * These exports can't be _GPL due to .h files using this within them, and it
  * might break something that was previously working...
  */
+ // 
 void *dev_get_drvdata(const struct device *dev)
 {
 	if (dev && dev->p)
@@ -418,11 +419,11 @@ int dev_set_drvdata(struct device *dev, void *data)
 	int error;
 
 	if (!dev->p) {
-		error = device_private_init(dev);
+		error = device_private_init(dev);			//Ë½ÓÐÊý¾Ý
 		if (error)
 			return error;
 	}
-	dev->p->driver_data = data;
+	dev->p->driver_data = data;					
 	return 0;
 }
 EXPORT_SYMBOL(dev_set_drvdata);

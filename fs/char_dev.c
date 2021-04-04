@@ -108,7 +108,7 @@ __register_chrdev_region(unsigned int major, unsigned int baseminor,
 	/* temporary */
 	if (major == 0) {
 		for (i = ARRAY_SIZE(chrdevs)-1; i > 0; i--) {
-			if (chrdevs[i] == NULL)
+			if (chrdevs[i] == NULL)		//设备号相关的全局指针数组
 				break;
 		}
 
@@ -122,7 +122,7 @@ __register_chrdev_region(unsigned int major, unsigned int baseminor,
 
 	cd->major = major;
 	cd->baseminor = baseminor;
-	cd->minorct = minorct;
+	cd->minorct = minorct;			//count,ct
 	strlcpy(cd->name, name, sizeof(cd->name));
 
 	i = major_to_index(major);

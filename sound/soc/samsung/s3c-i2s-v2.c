@@ -729,7 +729,20 @@ static int s3c2412_i2s_resume(struct snd_soc_dai *dai)
 #define s3c2412_i2s_suspend NULL
 #define s3c2412_i2s_resume  NULL
 #endif
+#ifdef CONFIG_SND_S5P_RP
+void s5p_i2s_do_suspend_for_rp(void)
+{
+	//if (!tx_clk_enabled && !rx_clk_enabled)
+	//	s5p_i2s_do_suspend(&s3c64xx_i2s_dai[1]);
+}
+EXPORT_SYMBOL(s5p_i2s_do_suspend_for_rp);
 
+void s5p_i2s_do_resume_for_rp(void)
+{
+	//s5p_i2s_do_resume(&s3c64xx_i2s_dai[1]);
+}
+EXPORT_SYMBOL(s5p_i2s_do_resume_for_rp);
+#endif /* CONFIG_SND_S5P_RP */
 int s3c_i2sv2_register_dai(struct device *dev, int id,
 		struct snd_soc_dai_driver *drv)
 {

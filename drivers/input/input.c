@@ -10,11 +10,9 @@
  * the Free Software Foundation.
  */
 
-#define pr_fmt(fmt) KBUILD_BASENAME ": " fmt
-
 #include <linux/init.h>
 #include <linux/types.h>
-#include <linux/input/mt.h>
+#include <linux/input.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/random.h>
@@ -26,6 +24,7 @@
 #include <linux/device.h>
 #include <linux/mutex.h>
 #include <linux/rcupdate.h>
+#include <linux/smp_lock.h>
 #include "input-compat.h"
 
 MODULE_AUTHOR("Vojtech Pavlik <vojtech@suse.cz>");
@@ -33,6 +32,25 @@ MODULE_DESCRIPTION("Input core");
 MODULE_LICENSE("GPL");
 
 #define INPUT_DEVICES	256
+
+/*
+ * EV_ABS events which should not be cached are listed here.
+ */
+static unsigned int input_abs_bypass_init_data[] __initdata = {
+	ABS_MT_TOUCH_MAJOR,
+	ABS_MT_TOUCH_MINOR,
+	ABS_MT_WIDTH_MAJOR,
+	ABS_MT_WIDTH_MINOR,
+	ABS_MT_ORIENTATION,
+	ABS_MT_POSITION_X,
+	ABS_MT_POSITION_Y,
+	ABS_MT_TOOL_TYPE,
+	ABS_MT_BLOB_ID,
+	ABS_MT_TRACKING_ID,
+	ABS_MT_PRESSURE,
+	0
+};
+static unsigned long input_abs_bypass[BITS_TO_LONGS(ABS_CNT)];
 
 static LIST_HEAD(input_dev_list);
 static LIST_HEAD(input_handler_list);
@@ -43,7 +61,7 @@ static LIST_HEAD(input_handler_list);
  * be mutually exclusive which simplifies locking in drivers implementing
  * input handlers.
  */
-static DEFINE_MUTEX(input_mutex);
+static DEFINE_MUTEX(input_mutex);			//include/linux/mutex.h文件中定义的宏
 
 static struct input_handler *input_table[8];
 
@@ -82,22 +100,26 @@ static void input_pass_event(struct input_dev *dev,
 
 	rcu_read_lock();
 
-	handle = rcu_dereference(dev->grab);
+	handle = rcu_dereference(dev->grab);//强制为input_dev的一个handle指针
+
+	//以下判断是否绑定handler?成立调用除nput_dev->grab->handler->event()
+	//不成立,遍历链表上handle成员
 	if (handle)
-		handle->handler->event(handle, type, code, value);
-	else {
+		handle->handler->event(handle, type, code, value);//调用handle的handler对象的event函数
+	else {  //如果没有强制指定handle就会遍历dev->h_list链表上的所有的handle成员
 		bool filtered = false;
 
 		list_for_each_entry_rcu(handle, &dev->h_list, d_node) {
-			if (!handle->open)
+			if (!handle->open)  //没打开放弃
 				continue;
 
-			handler = handle->handler;
+			handler = handle->handler; //handle被打开,被用户进程使用,就会调用event 
+			//或者说设备被用户使用,才有必要向用户空间导出信息
 			if (!handler->filter) {
 				if (filtered)
 					break;
 
-				handler->event(handle, type, code, value);
+				handler->event(handle, type, code, value);//只有设备被用户程序使用才能收到事件
 
 			} else if (handler->filter(handle, type, code, value))
 				filtered = true;
@@ -158,67 +180,19 @@ static void input_stop_autorepeat(struct input_dev *dev)
 	del_timer(&dev->timer);
 }
 
-#define INPUT_IGNORE_EVENT	0
-#define INPUT_PASS_TO_HANDLERS	1
-#define INPUT_PASS_TO_DEVICE	2
-#define INPUT_PASS_TO_ALL	(INPUT_PASS_TO_HANDLERS | INPUT_PASS_TO_DEVICE)
+#define INPUT_IGNORE_EVENT	0  //忽略事件
+#define INPUT_PASS_TO_HANDLERS	1 //交给handler处理
+#define INPUT_PASS_TO_DEVICE	2//交给input_dev处理
 
-static int input_handle_abs_event(struct input_dev *dev,
-				  unsigned int code, int *pval)
-{
-	bool is_mt_event;
-	int *pold;
-
-	if (code == ABS_MT_SLOT) {
-		/*
-		 * "Stage" the event; we'll flush it later, when we
-		 * get actual touch data.
-		 */
-		if (*pval >= 0 && *pval < dev->mtsize)
-			dev->slot = *pval;
-
-		return INPUT_IGNORE_EVENT;
-	}
-
-	is_mt_event = code >= ABS_MT_FIRST && code <= ABS_MT_LAST;
-
-	if (!is_mt_event) {
-		pold = &dev->absinfo[code].value;
-	} else if (dev->mt) {
-		struct input_mt_slot *mtslot = &dev->mt[dev->slot];
-		pold = &mtslot->abs[code - ABS_MT_FIRST];
-	} else {
-		/*
-		 * Bypass filtering for multi-touch events when
-		 * not employing slots.
-		 */
-		pold = NULL;
-	}
-
-	if (pold) {
-		*pval = input_defuzz_abs_event(*pval, *pold,
-						dev->absinfo[code].fuzz);
-		if (*pold == *pval)
-			return INPUT_IGNORE_EVENT;
-
-		*pold = *pval;
-	}
-
-	/* Flush pending "slot" event */
-	if (is_mt_event && dev->slot != input_abs_get_val(dev, ABS_MT_SLOT)) {
-		input_abs_set_val(dev, ABS_MT_SLOT, dev->slot);
-		input_pass_event(dev, EV_ABS, ABS_MT_SLOT, dev->slot);
-	}
-
-	return INPUT_PASS_TO_HANDLERS;
-}
+#define INPUT_PASS_TO_ALL	(INPUT_PASS_TO_HANDLERS | INPUT_PASS_TO_DEVICE) //交handler和input_dev处理
 
 static void input_handle_event(struct input_dev *dev,
 			       unsigned int type, unsigned int code, int value)
+	//如果是按键类型,code是键码,value是键值		   
 {
-	int disposition = INPUT_IGNORE_EVENT;
+	int disposition = INPUT_IGNORE_EVENT;//如果该变量没有变化忽略事件,后面会对该变量赋值
 
-	switch (type) {
+	switch (type) {//对不同的事件类型分别处理
 
 	case EV_SYN:
 		switch (code) {
@@ -228,30 +202,30 @@ static void input_handle_event(struct input_dev *dev,
 
 		case SYN_REPORT:
 			if (!dev->sync) {
-				dev->sync = true;
+				dev->sync = 1;
 				disposition = INPUT_PASS_TO_HANDLERS;
 			}
 			break;
 		case SYN_MT_REPORT:
-			dev->sync = false;
+			dev->sync = 0;
 			disposition = INPUT_PASS_TO_HANDLERS;
 			break;
 		}
 		break;
 
-	case EV_KEY:
+	case EV_KEY://分析按键事件
 		if (is_event_supported(code, dev->keybit, KEY_MAX) &&
-		    !!test_bit(code, dev->key) != value) {
+		    !!test_bit(code, dev->key) != value) { //测试按键状态是否改变
 
 			if (value != 2) {
-				__change_bit(code, dev->key);
+				__change_bit(code, dev->key);//改变
 				if (value)
 					input_start_autorepeat(dev, code);
 				else
 					input_stop_autorepeat(dev);
 			}
 
-			disposition = INPUT_PASS_TO_HANDLERS;
+			disposition = INPUT_PASS_TO_HANDLERS;//表示事件需要handler来处理
 		}
 		break;
 
@@ -265,9 +239,21 @@ static void input_handle_event(struct input_dev *dev,
 		break;
 
 	case EV_ABS:
-		if (is_event_supported(code, dev->absbit, ABS_MAX))
-			disposition = input_handle_abs_event(dev, code, &value);
+		if (is_event_supported(code, dev->absbit, ABS_MAX)) {
 
+			if (test_bit(code, input_abs_bypass)) {
+				disposition = INPUT_PASS_TO_HANDLERS;
+				break;
+			}
+
+			value = input_defuzz_abs_event(value,
+					dev->abs[code], dev->absfuzz[code]);
+
+			if (dev->abs[code] != value) {
+				dev->abs[code] = value;
+				disposition = INPUT_PASS_TO_HANDLERS;
+			}
+		}
 		break;
 
 	case EV_REL:
@@ -317,14 +303,14 @@ static void input_handle_event(struct input_dev *dev,
 		break;
 	}
 
-	if (disposition != INPUT_IGNORE_EVENT && type != EV_SYN)
-		dev->sync = false;
+	if (disposition != INPUT_IGNORE_EVENT && type != EV_SYN) // EV_SYN事件处理
+		dev->sync = 0;
 
-	if ((disposition & INPUT_PASS_TO_DEVICE) && dev->event)
-		dev->event(dev, type, code, value);
+	if ((disposition & INPUT_PASS_TO_DEVICE) && dev->event) 
+		dev->event(dev, type, code, value); //event向输入子系统报告一个将要发送给设备的事件(设备参与)
 
 	if (disposition & INPUT_PASS_TO_HANDLERS)
-		input_pass_event(dev, type, code, value);
+		input_pass_event(dev, type, code, value);//事件需要handler来处理的事件,按键分析重点如何将事件交给合适的函数来处理(handler参与)
 }
 
 /**
@@ -344,16 +330,18 @@ static void input_handle_event(struct input_dev *dev,
  * to 'seed' initial state of a switch or initial position of absolute
  * axis, etc.
  */
+
+
 void input_event(struct input_dev *dev,
-		 unsigned int type, unsigned int code, int value)
+		 unsigned int type, unsigned int code, int value) //type:事件类型EV_KEY,code:对应的事件类型的值,value:如果按键表示是否按下0/1
 {
 	unsigned long flags;
 
-	if (is_event_supported(type, dev->evbit, EV_MAX)) {
+	if (is_event_supported(type, dev->evbit, EV_MAX)) { //是否指针按键事件,检查dev->evbit是否设置
 
-		spin_lock_irqsave(&dev->event_lock, flags);
+		spin_lock_irqsave(&dev->event_lock, flags);//事件锁锁定
 		add_input_randomness(type, code, value);
-		input_handle_event(dev, type, code, value);
+		input_handle_event(dev, type, code, value);//继续向输入子系统发送相关数据
 		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 }
@@ -392,43 +380,6 @@ void input_inject_event(struct input_handle *handle,
 EXPORT_SYMBOL(input_inject_event);
 
 /**
- * input_alloc_absinfo - allocates array of input_absinfo structs
- * @dev: the input device emitting absolute events
- *
- * If the absinfo struct the caller asked for is already allocated, this
- * functions will not do anything.
- */
-void input_alloc_absinfo(struct input_dev *dev)
-{
-	if (!dev->absinfo)
-		dev->absinfo = kcalloc(ABS_CNT, sizeof(struct input_absinfo),
-					GFP_KERNEL);
-
-	WARN(!dev->absinfo, "%s(): kcalloc() failed?\n", __func__);
-}
-EXPORT_SYMBOL(input_alloc_absinfo);
-
-void input_set_abs_params(struct input_dev *dev, unsigned int axis,
-			  int min, int max, int fuzz, int flat)
-{
-	struct input_absinfo *absinfo;
-
-	input_alloc_absinfo(dev);
-	if (!dev->absinfo)
-		return;
-
-	absinfo = &dev->absinfo[axis];
-	absinfo->minimum = min;
-	absinfo->maximum = max;
-	absinfo->fuzz = fuzz;
-	absinfo->flat = flat;
-
-	dev->absbit[BIT_WORD(axis)] |= BIT_MASK(axis);
-}
-EXPORT_SYMBOL(input_set_abs_params);
-
-
-/**
  * input_grab_device - grabs device for exclusive use
  * @handle: input handle that wants to own the device
  *
@@ -451,6 +402,7 @@ int input_grab_device(struct input_handle *handle)
 	}
 
 	rcu_assign_pointer(dev->grab, handle);
+	synchronize_rcu();
 
  out:
 	mutex_unlock(&dev->mutex);
@@ -584,30 +536,12 @@ void input_close_device(struct input_handle *handle)
 EXPORT_SYMBOL(input_close_device);
 
 /*
- * Simulate keyup events for all keys that are marked as pressed.
- * The function must be called with dev->event_lock held.
- */
-static void input_dev_release_keys(struct input_dev *dev)
-{
-	int code;
-
-	if (is_event_supported(EV_KEY, dev->evbit, EV_MAX)) {
-		for (code = 0; code <= KEY_MAX; code++) {
-			if (is_event_supported(code, dev->keybit, KEY_MAX) &&
-			    __test_and_clear_bit(code, dev->key)) {
-				input_pass_event(dev, EV_KEY, code, 0);
-			}
-		}
-		input_pass_event(dev, EV_SYN, SYN_REPORT, 1);
-	}
-}
-
-/*
  * Prepare device for unregistering
  */
 static void input_disconnect_device(struct input_dev *dev)
 {
 	struct input_handle *handle;
+	int code;
 
 	/*
 	 * Mark device as going away. Note that we take dev->mutex here
@@ -626,7 +560,15 @@ static void input_disconnect_device(struct input_dev *dev)
 	 * generate events even after we done here but they will not
 	 * reach any handlers.
 	 */
-	input_dev_release_keys(dev);
+	if (is_event_supported(EV_KEY, dev->evbit, EV_MAX)) {
+		for (code = 0; code <= KEY_MAX; code++) {
+			if (is_event_supported(code, dev->keybit, KEY_MAX) &&
+			    __test_and_clear_bit(code, dev->key)) {
+				input_pass_event(dev, EV_KEY, code, 0);
+			}
+		}
+		input_pass_event(dev, EV_SYN, SYN_REPORT, 1);
+	}
 
 	list_for_each_entry(handle, &dev->h_list, d_node)
 		handle->open = 0;
@@ -634,141 +576,78 @@ static void input_disconnect_device(struct input_dev *dev)
 	spin_unlock_irq(&dev->event_lock);
 }
 
-/**
- * input_scancode_to_scalar() - converts scancode in &struct input_keymap_entry
- * @ke: keymap entry containing scancode to be converted.
- * @scancode: pointer to the location where converted scancode should
- *	be stored.
- *
- * This function is used to convert scancode stored in &struct keymap_entry
- * into scalar form understood by legacy keymap handling methods. These
- * methods expect scancodes to be represented as 'unsigned int'.
- */
-int input_scancode_to_scalar(const struct input_keymap_entry *ke,
-			     unsigned int *scancode)
-{
-	switch (ke->len) {
-	case 1:
-		*scancode = *((u8 *)ke->scancode);
-		break;
-
-	case 2:
-		*scancode = *((u16 *)ke->scancode);
-		break;
-
-	case 4:
-		*scancode = *((u32 *)ke->scancode);
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL(input_scancode_to_scalar);
-
-/*
- * Those routines handle the default case where no [gs]etkeycode() is
- * defined. In this case, an array indexed by the scancode is used.
- */
-
-static unsigned int input_fetch_keycode(struct input_dev *dev,
-					unsigned int index)
+static int input_fetch_keycode(struct input_dev *dev, int scancode)
 {
 	switch (dev->keycodesize) {
-	case 1:
-		return ((u8 *)dev->keycode)[index];
+		case 1:
+			return ((u8 *)dev->keycode)[scancode];
 
-	case 2:
-		return ((u16 *)dev->keycode)[index];
+		case 2:
+			return ((u16 *)dev->keycode)[scancode];
 
-	default:
-		return ((u32 *)dev->keycode)[index];
+		default:
+			return ((u32 *)dev->keycode)[scancode];
 	}
 }
 
 static int input_default_getkeycode(struct input_dev *dev,
-				    struct input_keymap_entry *ke)
+				    unsigned int scancode,
+				    unsigned int *keycode)
 {
-	unsigned int index;
-	int error;
-
 	if (!dev->keycodesize)
 		return -EINVAL;
 
-	if (ke->flags & INPUT_KEYMAP_BY_INDEX)
-		index = ke->index;
-	else {
-		error = input_scancode_to_scalar(ke, &index);
-		if (error)
-			return error;
-	}
-
-	if (index >= dev->keycodemax)
+	if (scancode >= dev->keycodemax)
 		return -EINVAL;
 
-	ke->keycode = input_fetch_keycode(dev, index);
-	ke->index = index;
-	ke->len = sizeof(index);
-	memcpy(ke->scancode, &index, sizeof(index));
+	*keycode = input_fetch_keycode(dev, scancode);
 
 	return 0;
 }
 
 static int input_default_setkeycode(struct input_dev *dev,
-				    const struct input_keymap_entry *ke,
-				    unsigned int *old_keycode)
+				    unsigned int scancode,
+				    unsigned int keycode)
 {
-	unsigned int index;
-	int error;
+	int old_keycode;
 	int i;
+
+	if (scancode >= dev->keycodemax)
+		return -EINVAL;
 
 	if (!dev->keycodesize)
 		return -EINVAL;
 
-	if (ke->flags & INPUT_KEYMAP_BY_INDEX) {
-		index = ke->index;
-	} else {
-		error = input_scancode_to_scalar(ke, &index);
-		if (error)
-			return error;
-	}
-
-	if (index >= dev->keycodemax)
-		return -EINVAL;
-
-	if (dev->keycodesize < sizeof(ke->keycode) &&
-			(ke->keycode >> (dev->keycodesize * 8)))
+	if (dev->keycodesize < sizeof(keycode) && (keycode >> (dev->keycodesize * 8)))
 		return -EINVAL;
 
 	switch (dev->keycodesize) {
 		case 1: {
 			u8 *k = (u8 *)dev->keycode;
-			*old_keycode = k[index];
-			k[index] = ke->keycode;
+			old_keycode = k[scancode];
+			k[scancode] = keycode;
 			break;
 		}
 		case 2: {
 			u16 *k = (u16 *)dev->keycode;
-			*old_keycode = k[index];
-			k[index] = ke->keycode;
+			old_keycode = k[scancode];
+			k[scancode] = keycode;
 			break;
 		}
 		default: {
 			u32 *k = (u32 *)dev->keycode;
-			*old_keycode = k[index];
-			k[index] = ke->keycode;
+			old_keycode = k[scancode];
+			k[scancode] = keycode;
 			break;
 		}
 	}
 
-	__clear_bit(*old_keycode, dev->keybit);
-	__set_bit(ke->keycode, dev->keybit);
+	__clear_bit(old_keycode, dev->keybit);
+	__set_bit(keycode, dev->keybit);
 
 	for (i = 0; i < dev->keycodemax; i++) {
-		if (input_fetch_keycode(dev, i) == *old_keycode) {
-			__set_bit(*old_keycode, dev->keybit);
+		if (input_fetch_keycode(dev, i) == old_keycode) {
+			__set_bit(old_keycode, dev->keybit);
 			break; /* Setting the bit twice is useless, so break */
 		}
 	}
@@ -779,18 +658,21 @@ static int input_default_setkeycode(struct input_dev *dev,
 /**
  * input_get_keycode - retrieve keycode currently mapped to a given scancode
  * @dev: input device which keymap is being queried
- * @ke: keymap entry
+ * @scancode: scancode (or its equivalent for device in question) for which
+ *	keycode is needed
+ * @keycode: result
  *
  * This function should be called by anyone interested in retrieving current
- * keymap. Presently evdev handlers use it.
+ * keymap. Presently keyboard and evdev handlers use it.
  */
-int input_get_keycode(struct input_dev *dev, struct input_keymap_entry *ke)
+int input_get_keycode(struct input_dev *dev,
+		      unsigned int scancode, unsigned int *keycode)
 {
 	unsigned long flags;
 	int retval;
 
 	spin_lock_irqsave(&dev->event_lock, flags);
-	retval = dev->getkeycode(dev, ke);
+	retval = dev->getkeycode(dev, scancode, keycode);
 	spin_unlock_irqrestore(&dev->event_lock, flags);
 
 	return retval;
@@ -798,26 +680,31 @@ int input_get_keycode(struct input_dev *dev, struct input_keymap_entry *ke)
 EXPORT_SYMBOL(input_get_keycode);
 
 /**
- * input_set_keycode - attribute a keycode to a given scancode
+ * input_get_keycode - assign new keycode to a given scancode
  * @dev: input device which keymap is being updated
- * @ke: new keymap entry
+ * @scancode: scancode (or its equivalent for device in question)
+ * @keycode: new keycode to be assigned to the scancode
  *
  * This function should be called by anyone needing to update current
  * keymap. Presently keyboard and evdev handlers use it.
  */
 int input_set_keycode(struct input_dev *dev,
-		      const struct input_keymap_entry *ke)
+		      unsigned int scancode, unsigned int keycode)
 {
 	unsigned long flags;
-	unsigned int old_keycode;
+	int old_keycode;
 	int retval;
 
-	if (ke->keycode > KEY_MAX)
+	if (keycode > KEY_MAX)
 		return -EINVAL;
 
 	spin_lock_irqsave(&dev->event_lock, flags);
 
-	retval = dev->setkeycode(dev, ke, &old_keycode);
+	retval = dev->getkeycode(dev, scancode, &old_keycode);
+	if (retval)
+		goto out;
+
+	retval = dev->setkeycode(dev, scancode, keycode);
 	if (retval)
 		goto out;
 
@@ -856,26 +743,26 @@ static const struct input_device_id *input_match_device(struct input_handler *ha
 {
 	const struct input_device_id *id;
 	int i;
-
+	//for循环
 	for (id = handler->id_table; id->flags || id->driver_info; id++) {
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_BUS)
-			if (id->bustype != dev->id.bustype)
+			if (id->bustype != dev->id.bustype) //总线匹配
 				continue;
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_VENDOR)
-			if (id->vendor != dev->id.vendor)
+			if (id->vendor != dev->id.vendor)//厂商
 				continue;
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_PRODUCT)
-			if (id->product != dev->id.product)
+			if (id->product != dev->id.product)//产品
 				continue;
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_VERSION)
-			if (id->version != dev->id.version)
+			if (id->version != dev->id.version)//版本
 				continue;
-
-		MATCH_BIT(evbit,  EV_MAX);
+		
+		MATCH_BIT(evbit,  EV_MAX); 
 		MATCH_BIT(keybit, KEY_MAX);
 		MATCH_BIT(relbit, REL_MAX);
 		MATCH_BIT(absbit, ABS_MAX);
@@ -884,8 +771,9 @@ static const struct input_device_id *input_match_device(struct input_handler *ha
 		MATCH_BIT(sndbit, SND_MAX);
 		MATCH_BIT(ffbit,  FF_MAX);
 		MATCH_BIT(swbit,  SW_MAX);
+		
 
-		if (!handler->match || handler->match(handler, dev))
+		if (!handler->match || handler->match(handler, dev)) 
 			return id;
 	}
 
@@ -894,17 +782,19 @@ static const struct input_device_id *input_match_device(struct input_handler *ha
 
 static int input_attach_handler(struct input_dev *dev, struct input_handler *handler)
 {
-	const struct input_device_id *id;
+	const struct input_device_id *id;//定义了一个设备标识
 	int error;
 
-	id = input_match_device(handler, dev);
+	id = input_match_device(handler, dev);//匹配判断handler->id_table,dev->id
 	if (!id)
 		return -ENODEV;
 
-	error = handler->connect(handler, dev, id);
+	error = handler->connect(handler, dev, id);//匹配成功调用connect函数将handler和input_dev连接起来
 	if (error && error != -ENODEV)
-		pr_err("failed to attach handler %s to device %s, error: %d\n",
-		       handler->name, kobject_name(&dev->dev.kobj), error);
+		printk(KERN_ERR
+			"input: failed to attach handler %s to device %s, "
+			"error: %d\n",
+			handler->name, kobject_name(&dev->dev.kobj), error);
 
 	return error;
 }
@@ -1051,8 +941,6 @@ static int input_devices_seq_show(struct seq_file *seq, void *v)
 	list_for_each_entry(handle, &dev->h_list, d_node)
 		seq_printf(seq, "%s ", handle->name);
 	seq_putc(seq, '\n');
-
-	input_seq_print_bitmap(seq, "PROP", dev->propbit, INPUT_PROP_MAX);
 
 	input_seq_print_bitmap(seq, "EV", dev->evbit, EV_MAX);
 	if (test_bit(EV_KEY, dev->evbit))
@@ -1277,26 +1165,11 @@ static ssize_t input_dev_show_modalias(struct device *dev,
 }
 static DEVICE_ATTR(modalias, S_IRUGO, input_dev_show_modalias, NULL);
 
-static int input_print_bitmap(char *buf, int buf_size, unsigned long *bitmap,
-			      int max, int add_cr);
-
-static ssize_t input_dev_show_properties(struct device *dev,
-					 struct device_attribute *attr,
-					 char *buf)
-{
-	struct input_dev *input_dev = to_input_dev(dev);
-	int len = input_print_bitmap(buf, PAGE_SIZE, input_dev->propbit,
-				     INPUT_PROP_MAX, true);
-	return min_t(int, len, PAGE_SIZE);
-}
-static DEVICE_ATTR(properties, S_IRUGO, input_dev_show_properties, NULL);
-
 static struct attribute *input_dev_attrs[] = {
 	&dev_attr_name.attr,
 	&dev_attr_phys.attr,
 	&dev_attr_uniq.attr,
 	&dev_attr_modalias.attr,
-	&dev_attr_properties.attr,
 	NULL
 };
 
@@ -1414,8 +1287,6 @@ static void input_dev_release(struct device *device)
 	struct input_dev *dev = to_input_dev(device);
 
 	input_ff_destroy(dev);
-	input_mt_destroy_slots(dev);
-	kfree(dev->absinfo);
 	kfree(dev);
 
 	module_put(THIS_MODULE);
@@ -1430,7 +1301,7 @@ static int input_add_uevent_bm_var(struct kobj_uevent_env *env,
 {
 	int len;
 
-	if (add_uevent_var(env, "%s", name))
+	if (add_uevent_var(env, "%s=", name))
 		return -ENOMEM;
 
 	len = input_print_bitmap(&env->buf[env->buflen - 1],
@@ -1496,8 +1367,6 @@ static int input_dev_uevent(struct device *device, struct kobj_uevent_env *env)
 	if (dev->uniq)
 		INPUT_ADD_HOTPLUG_VAR("UNIQ=\"%s\"", dev->uniq);
 
-	INPUT_ADD_HOTPLUG_BM_VAR("PROP=", dev->propbit, INPUT_PROP_MAX);
-
 	INPUT_ADD_HOTPLUG_BM_VAR("EV=", dev->evbit, EV_MAX);
 	if (test_bit(EV_KEY, dev->evbit))
 		INPUT_ADD_HOTPLUG_BM_VAR("KEY=", dev->keybit, KEY_MAX);
@@ -1541,7 +1410,8 @@ static int input_dev_uevent(struct device *device, struct kobj_uevent_env *env)
 		}							\
 	} while (0)
 
-static void input_dev_toggle(struct input_dev *dev, bool activate)
+#ifdef CONFIG_PM
+static void input_dev_reset(struct input_dev *dev, bool activate)
 {
 	if (!dev->event)
 		return;
@@ -1555,44 +1425,12 @@ static void input_dev_toggle(struct input_dev *dev, bool activate)
 	}
 }
 
-/**
- * input_reset_device() - reset/restore the state of input device
- * @dev: input device whose state needs to be reset
- *
- * This function tries to reset the state of an opened input device and
- * bring internal state and state if the hardware in sync with each other.
- * We mark all keys as released, restore LED state, repeat rate, etc.
- */
-void input_reset_device(struct input_dev *dev)
-{
-	mutex_lock(&dev->mutex);
-
-	if (dev->users) {
-		input_dev_toggle(dev, true);
-
-		/*
-		 * Keys that have been pressed at suspend time are unlikely
-		 * to be still pressed when we resume.
-		 */
-		spin_lock_irq(&dev->event_lock);
-		input_dev_release_keys(dev);
-		spin_unlock_irq(&dev->event_lock);
-	}
-
-	mutex_unlock(&dev->mutex);
-}
-EXPORT_SYMBOL(input_reset_device);
-
-#ifdef CONFIG_PM
 static int input_dev_suspend(struct device *dev)
 {
 	struct input_dev *input_dev = to_input_dev(dev);
 
 	mutex_lock(&input_dev->mutex);
-
-	if (input_dev->users)
-		input_dev_toggle(input_dev, false);
-
+	input_dev_reset(input_dev, false);
 	mutex_unlock(&input_dev->mutex);
 
 	return 0;
@@ -1602,7 +1440,9 @@ static int input_dev_resume(struct device *dev)
 {
 	struct input_dev *input_dev = to_input_dev(dev);
 
-	input_reset_device(input_dev);
+	mutex_lock(&input_dev->mutex);
+	input_dev_reset(input_dev, true);
+	mutex_unlock(&input_dev->mutex);
 
 	return 0;
 }
@@ -1735,8 +1575,9 @@ void input_set_capability(struct input_dev *dev, unsigned int type, unsigned int
 		break;
 
 	default:
-		pr_err("input_set_capability: unknown type %u (code %u)\n",
-		       type, code);
+		printk(KERN_ERR
+			"input_set_capability: unknown type %u (code %u)\n",
+			type, code);
 		dump_stack();
 		return;
 	}
@@ -1744,42 +1585,6 @@ void input_set_capability(struct input_dev *dev, unsigned int type, unsigned int
 	__set_bit(type, dev->evbit);
 }
 EXPORT_SYMBOL(input_set_capability);
-
-static unsigned int input_estimate_events_per_packet(struct input_dev *dev)
-{
-	int mt_slots;
-	int i;
-	unsigned int events;
-
-	if (dev->mtsize) {
-		mt_slots = dev->mtsize;
-	} else if (test_bit(ABS_MT_TRACKING_ID, dev->absbit)) {
-		mt_slots = dev->absinfo[ABS_MT_TRACKING_ID].maximum -
-			   dev->absinfo[ABS_MT_TRACKING_ID].minimum + 1,
-		mt_slots = clamp(mt_slots, 2, 32);
-	} else if (test_bit(ABS_MT_POSITION_X, dev->absbit)) {
-		mt_slots = 2;
-	} else {
-		mt_slots = 0;
-	}
-
-	events = mt_slots + 1; /* count SYN_MT_REPORT and SYN_REPORT */
-
-	for (i = 0; i < ABS_CNT; i++) {
-		if (test_bit(i, dev->absbit)) {
-			if (input_is_mt_axis(i))
-				events += mt_slots;
-			else
-				events++;
-		}
-	}
-
-	for (i = 0; i < REL_CNT; i++)
-		if (test_bit(i, dev->relbit))
-			events++;
-
-	return events;
-}
 
 #define INPUT_CLEANSE_BITMASK(dev, type, bits)				\
 	do {								\
@@ -1820,7 +1625,7 @@ int input_register_device(struct input_dev *dev)
 	int error;
 
 	/* Every input device generates EV_SYN/SYN_REPORT events. */
-	__set_bit(EV_SYN, dev->evbit);
+	__set_bit(EV_SYN, dev->evbit);//evbit表示该设备所支持的事件,这里支持所有的事件,一个设备可支持多个事件
 
 	/* KEY_RESERVED is not supposed to be transmitted to userspace. */
 	__clear_bit(KEY_RESERVED, dev->keybit);
@@ -1828,16 +1633,12 @@ int input_register_device(struct input_dev *dev)
 	/* Make sure that bitmasks not mentioned in dev->evbit are clean. */
 	input_cleanse_bitmasks(dev);
 
-	if (!dev->hint_events_per_packet)
-		dev->hint_events_per_packet =
-				input_estimate_events_per_packet(dev);
-
 	/*
 	 * If delay and period are pre-set by the driver, then autorepeating
 	 * is handled by the driver itself and we don't do it in input.c.
 	 */
 	init_timer(&dev->timer);
-	if (!dev->rep[REP_DELAY] && !dev->rep[REP_PERIOD]) {
+	if (!dev->rep[REP_DELAY] && !dev->rep[REP_PERIOD]) { //处理重复按键
 		dev->timer.data = (long) dev;
 		dev->timer.function = input_repeat_key;
 		dev->rep[REP_DELAY] = 250;
@@ -1851,16 +1652,15 @@ int input_register_device(struct input_dev *dev)
 		dev->setkeycode = input_default_setkeycode;
 
 	dev_set_name(&dev->dev, "input%ld",
-		     (unsigned long) atomic_inc_return(&input_no) - 1);
+		     (unsigned long) atomic_inc_return(&input_no) - 1);//device名字在sysfs中反映
 
-	error = device_add(&dev->dev);
+	error = device_add(&dev->dev);//注册到设备模型才能在sysfs中反映
 	if (error)
 		return error;
 
 	path = kobject_get_path(&dev->dev.kobj, GFP_KERNEL);
-	pr_info("%s as %s\n",
-		dev->name ? dev->name : "Unspecified device",
-		path ? path : "N/A");
+	printk(KERN_INFO "input: %s as %s\n",
+		dev->name ? dev->name : "Unspecified device", path ? path : "N/A");//输出注册时的调试信息
 	kfree(path);
 
 	error = mutex_lock_interruptible(&input_mutex);
@@ -1869,10 +1669,11 @@ int input_register_device(struct input_dev *dev)
 		return error;
 	}
 
-	list_add_tail(&dev->node, &input_dev_list);
+	list_add_tail(&dev->node, &input_dev_list);//将input_dev加入到input_dev_list链表,该链表包含了系统中所有的输入设备
+	
 
 	list_for_each_entry(handler, &input_handler_list, node)
-		input_attach_handler(dev, handler);
+		input_attach_handler(dev, handler);//用来匹配dev,handler成功才关联
 
 	input_wakeup_procfs_readers();
 
@@ -1925,24 +1726,24 @@ int input_register_handler(struct input_handler *handler)
 	struct input_dev *dev;
 	int retval;
 
-	retval = mutex_lock_interruptible(&input_mutex);
+	retval = mutex_lock_interruptible(&input_mutex);		//上锁的原因,是因为上层的应用可能会同时调用底层的驱动,导致产生竞态,By Clark
 	if (retval)
 		return retval;
 
 	INIT_LIST_HEAD(&handler->h_list);
 
 	if (handler->fops != NULL) {
-		if (input_table[handler->minor >> 5]) {
+		if (input_table[handler->minor >> 5]) { //输入设备节点的次设备号 右移5位插入input_table[]
 			retval = -EBUSY;
 			goto out;
 		}
-		input_table[handler->minor >> 5] = handler;
+		input_table[handler->minor >> 5] = handler;//将handler放到对应的数组项
 	}
 
-	list_add_tail(&handler->node, &input_handler_list);
+	list_add_tail(&handler->node, &input_handler_list);//将handler挂到input_handler_list
 
 	list_for_each_entry(dev, &input_dev_list, node)
-		input_attach_handler(dev, handler);
+		input_attach_handler(dev, handler);// 每搜索一个节点都会调用此函数 
 
 	input_wakeup_procfs_readers();
 
@@ -2044,7 +1845,7 @@ int input_register_handle(struct input_handle *handle)
 	if (handler->filter)
 		list_add_rcu(&handle->d_node, &dev->h_list);
 	else
-		list_add_tail_rcu(&handle->d_node, &dev->h_list);
+		list_add_tail_rcu(&handle->d_node, &dev->h_list);//handle挂到对应的input_dev的h_list链表
 
 	mutex_unlock(&dev->mutex);
 
@@ -2054,9 +1855,9 @@ int input_register_handle(struct input_handle *handle)
 	 * we can't be racing with input_unregister_handle()
 	 * and so separate lock is not needed here.
 	 */
-	list_add_tail_rcu(&handle->h_node, &handler->h_list);
+	list_add_tail_rcu(&handle->h_node, &handler->h_list);//handle挂到对应的handler的h_list链表
 
-	if (handler->start)
+	if (handler->start)   //如果handler定义了start函数将被调用
 		handler->start(handle);
 
 	return 0;
@@ -2101,9 +1902,12 @@ static int input_open_file(struct inode *inode, struct file *file)
 		return err;
 
 	/* No load-on-demand here? */
-	handler = input_table[iminor(inode) >> 5];
+	handler = input_table[iminor(inode) >> 5];  // 用iminor(inode)代表打开文件的次设备号除以32做该全局数组的索引取出handler
+						//在input_register_handler时对该数组初始化
+	//如果存在
 	if (handler)
-		new_fops = fops_get(handler->fops);
+		new_fops = fops_get(handler->fops);//获得新的文件操作指针,后面就用new_fops来操作
+		
 
 	mutex_unlock(&input_mutex);
 
@@ -2111,8 +1915,8 @@ static int input_open_file(struct inode *inode, struct file *file)
 	 * That's _really_ odd. Usually NULL ->open means "nothing special",
 	 * not "no device". Oh, well...
 	 */
-	if (!new_fops || !new_fops->open) {
-		fops_put(new_fops);
+	if (!new_fops || !new_fops->open) {//判断是否定义open
+		fops_put(new_fops); 
 		err = -ENODEV;
 		goto out;
 	}
@@ -2120,7 +1924,7 @@ static int input_open_file(struct inode *inode, struct file *file)
 	old_fops = file->f_op;
 	file->f_op = new_fops;
 
-	err = new_fops->open(inode, file);
+	err = new_fops->open(inode, file);//用新的open打开
 	if (err) {
 		fops_put(file->f_op);
 		file->f_op = fops_get(old_fops);
@@ -2132,27 +1936,37 @@ out:
 
 static const struct file_operations input_fops = {
 	.owner = THIS_MODULE,
-	.open = input_open_file,
-	.llseek = noop_llseek,
+	.open = input_open_file,//转移到input_handler,便于不同的handler对不同的文件打开方法
 };
+
+static void __init input_init_abs_bypass(void)
+{
+	const unsigned int *p;
+
+	for (p = input_abs_bypass_init_data; *p; p++)
+		input_abs_bypass[BIT_WORD(*p)] |= BIT_MASK(*p);
+}
 
 static int __init input_init(void)
 {
 	int err;
 
-	err = class_register(&input_class);
+	input_init_abs_bypass();
+
+	err = class_register(&input_class);//注册类,所有的input dev都在属于该类 sysfs:/dev/class/input
 	if (err) {
-		pr_err("unable to register input_dev class\n");
+		printk(KERN_ERR "input: unable to register input_dev class\n");
 		return err;
 	}
 
-	err = input_proc_init();
+	err = input_proc_init();//建立相关sysfs交互的文件
 	if (err)
 		goto fail1;
 
-	err = register_chrdev(INPUT_MAJOR, "input", &input_fops);
+	err = register_chrdev(INPUT_MAJOR, "input", &input_fops);//input dev主设备号为13,次设备号0-255,操作指针input_fops
+	
 	if (err) {
-		pr_err("unable to register char major %d", INPUT_MAJOR);
+		printk(KERN_ERR "input: unable to register char major %d", INPUT_MAJOR);
 		goto fail2;
 	}
 

@@ -82,7 +82,7 @@
 #define DEV_DISCARD(sec) *(.dev##sec)
 #endif
 
-#ifdef CONFIG_HOTPLUG_CPU
+#ifdef CONFIG_HOTPLUG_CPU				// comment by clark :: 可在运行时增加CPU数目。
 #define CPU_KEEP(sec)    *(.cpu##sec)
 #define CPU_DISCARD(sec)
 #else

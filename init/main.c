@@ -120,6 +120,7 @@ void (*__initdata late_time_init)(void);
 extern void softirq_init(void);
 
 /* Untouched command line saved by arch-specific code. */
+/* comment by clark :: __initdata 定义 在 include/linux/init.h  文件中*/
 char __initdata boot_command_line[COMMAND_LINE_SIZE];
 /* Untouched saved command line (eg. for /proc) */
 char *saved_command_line;
@@ -452,6 +453,14 @@ static void __init mm_init(void)
 	pgtable_cache_init();
 	vmalloc_init();
 }
+
+/* comment by clark :: asmlinkage: 将函数参数存放在局部栈中  FASTCALL: 通知编译器将函数参数用寄存器保存起来(R0~R4)*/
+/* comment by clark :: 被extern “C”限定的函数或变量是extern类型的extern是C/C++语言中表明函数和全局变量作用范围（可见性）的关键字，
+/* comment by clark :: 该关键字告诉编译器，其声明的函数和变量可以在本模块或其它模块中使用。与extern对应的关键字是static，*/
+/* comment by clark :: 被它修饰的全局变量和函数只能在本模块中使用。因此，一个函数或变量只可能被本模块使用时，其不可能被extern “C”修饰。*/
+/* comment by clark :: 被extern "C"修饰的变量和函数是按照C语言方式编译和连接的。*/
+/* comment by clark :: ARM平台未具体定义上述两种宏，默认通过寄存器传递函数参数，若参数大于5个，多余的参数会通过局部栈进行传递。*/
+/* comment by clark :: start_kernel 在 head_common.S 中调用 */
 
 asmlinkage void __init start_kernel(void)
 {

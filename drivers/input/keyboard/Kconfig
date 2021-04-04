@@ -12,6 +12,29 @@ menuconfig INPUT_KEYBOARD
 
 if INPUT_KEYBOARD
 
+config KEYBOARD_HS0038
+	tristate "HS0038 ir receiver for FS210"
+	depends on CPU_S5PV210
+	default y
+	help
+	  Say Y here to enable the ir receiver(HS0038) of FS210
+
+choice
+depends on KEYBOARD_HS0038
+prompt "Select HS0038 function"
+default KEYBOARD_HS0038_NORM
+config KEYBOARD_HS0038_NORM
+	bool "HS0038 standard mode."
+	depends on KEYBOARD_HS0038
+	help
+		hs0038 standard mode
+config KEYBOARD_HS0038_VIRTUALTS
+	bool "hs0038 virtualTs mode"
+	depends on KEYBOARD_HS0038
+	help
+		hs0038 virtualTs mode.
+endchoice
+
 config KEYBOARD_ADP5520
 	tristate "Keypad Support for ADP5520 PMIC"
 	depends on PMIC_ADP5520
@@ -41,6 +64,23 @@ config KEYBOARD_ADP5589
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called adp5589-keys.
+
+config KEYBOARD_S3C_GPIO
+	bool "S3C gpio keypad support"
+	depends on CPU_S5PC100 || CPU_S5PC110 || CPU_S5P6442 || CPU_S5PV210
+	default n
+	help
+	  Say Y here if you want to use the  gpio keypad for FS210.
+	  
+config S3C_KEYPAD_DEBUG
+	bool "Print debug messages for FS210 keypad"
+	depends on KEYBOARD_S3C_GPIO
+	default n
+	help
+	  Say Y here if you want to print debug messages for FS210 keypad.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called s3c-keypad.
 
 config KEYBOARD_AMIGA
 	tristate "Amiga keyboard"

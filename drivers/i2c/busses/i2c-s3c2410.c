@@ -76,7 +76,7 @@ struct s3c24xx_i2c {
 	struct clk		*clk;
 	struct device		*dev;
 	struct resource		*ioarea;
-	struct i2c_adapter	adap;
+	struct i2c_adapter	adap; //适配器对象
 
 #ifdef CONFIG_CPU_FREQ
 	struct notifier_block	freq_transition;
@@ -582,7 +582,7 @@ static u32 s3c24xx_i2c_func(struct i2c_adapter *adap)
 /* i2c bus registration info */
 
 static const struct i2c_algorithm s3c24xx_i2c_algorithm = {
-	.master_xfer		= s3c24xx_i2c_xfer,
+	.master_xfer		= s3c24xx_i2c_xfer,//真正用i2c协议来收发数据的函数上层最终调用它
 	.functionality		= s3c24xx_i2c_func,
 };
 
@@ -792,12 +792,12 @@ static int s3c24xx_i2c_init(struct s3c24xx_i2c *i2c)
 
 static int s3c24xx_i2c_probe(struct platform_device *pdev)
 {
-	struct s3c24xx_i2c *i2c;
-	struct s3c2410_platform_i2c *pdata;
+	struct s3c24xx_i2c *i2c;//本地对象包含了i2c_adapter对象
+	struct s3c2410_platform_i2c *pdata;//i2c平台数据对象
 	struct resource *res;
 	int ret;
-
-	pdata = pdev->dev.platform_data;
+	printk("<kernel>call %s\n",__FUNCTION__);
+	pdata = pdev->dev.platform_data;//获取平台数据
 	if (!pdata) {
 		dev_err(&pdev->dev, "no platform data\n");
 		return -EINVAL;
@@ -811,7 +811,7 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 
 	strlcpy(i2c->adap.name, "s3c2410-i2c", sizeof(i2c->adap.name));
 	i2c->adap.owner   = THIS_MODULE;
-	i2c->adap.algo    = &s3c24xx_i2c_algorithm;
+	i2c->adap.algo    = &s3c24xx_i2c_algorithm;//设置i2c_adapter对象
 	i2c->adap.retries = 2;
 	i2c->adap.class   = I2C_CLASS_HWMON | I2C_CLASS_SPD;
 	i2c->tx_setup     = 50;
@@ -831,10 +831,10 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "clock source %p\n", i2c->clk);
 
-	clk_enable(i2c->clk);
+	clk_enable(i2c->clk);//使能i2c时钟
 
 	/* map the registers */
-
+	//获取io资源
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		dev_err(&pdev->dev, "cannot find IO resource\n");
@@ -850,7 +850,7 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 		ret = -ENXIO;
 		goto err_clk;
 	}
-
+	//映射io资源
 	i2c->regs = ioremap(res->start, resource_size(res));
 
 	if (i2c->regs == NULL) {
@@ -869,20 +869,20 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 
 	/* initialise the i2c controller */
 
-	ret = s3c24xx_i2c_init(i2c);
+	ret = s3c24xx_i2c_init(i2c);//初始化i2c控制器对象
 	if (ret != 0)
 		goto err_iomap;
 
 	/* find the IRQ for this unit (note, this relies on the init call to
 	 * ensure no current IRQs pending
 	 */
-
+	//获取中断资源
 	i2c->irq = ret = platform_get_irq(pdev, 0);
 	if (ret <= 0) {
 		dev_err(&pdev->dev, "cannot find IRQ\n");
 		goto err_iomap;
 	}
-
+	//注册中断
 	ret = request_irq(i2c->irq, s3c24xx_i2c_irq, IRQF_DISABLED,
 			  dev_name(&pdev->dev), i2c);
 
@@ -897,14 +897,16 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	/* Note, previous versions of the driver used i2c_add_adapter()
+	/* Note, previous versions of the driver used i2c_add_adapter() 这是老版本
 	 * to add the bus at any number. We now pass the bus number via
 	 * the platform data, so if unset it will now default to always
 	 * being bus 0.
+
+	 
 	 */
 
 	i2c->adap.nr = pdata->bus_num;
-
+	//注册适配器
 	ret = i2c_add_numbered_adapter(&i2c->adap);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to add bus to i2c core\n");

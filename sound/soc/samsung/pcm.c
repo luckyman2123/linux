@@ -19,6 +19,7 @@
 
 #include <plat/audio.h>
 #include <plat/dma.h>
+#include <mach/regs-clock.h>
 
 #include "dma.h"
 #include "pcm.h"
@@ -408,6 +409,7 @@ exit:
 static int s3c_pcm_set_clkdiv(struct snd_soc_dai *cpu_dai,
 						int div_id, int div)
 {
+#if 0
 	struct s3c_pcm_info *pcm = snd_soc_dai_get_drvdata(cpu_dai);
 
 	switch (div_id) {
@@ -418,7 +420,7 @@ static int s3c_pcm_set_clkdiv(struct snd_soc_dai *cpu_dai,
 	default:
 		return -EINVAL;
 	}
-
+#endif
 	return 0;
 }
 
@@ -494,6 +496,11 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	struct s3c_pcm_info *pcm;
 	struct resource *mem_res, *dmatx_res, *dmarx_res;
 	struct s3c_audio_pdata *pcm_pdata;
+        struct clk *fout_epll, *mout_epll;
+        struct clk *sclk_audio;
+
+s3c_pcm_dai[pdev->id].ops = &s3c_pcm_dai_ops;
+
 	int ret;
 
 	/* Check for valid device index */
@@ -536,6 +543,7 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	/* Default is 128fs */
 	pcm->sclk_per_fs = 128;
 
+#if 0
 	pcm->cclk = clk_get(&pdev->dev, "audio-bus");
 	if (IS_ERR(pcm->cclk)) {
 		dev_err(&pdev->dev, "failed to get audio-bus\n");
@@ -544,6 +552,7 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	}
 	clk_enable(pcm->cclk);
 
+#endif
 	/* record our pcm structure for later use in the callbacks */
 	dev_set_drvdata(&pdev->dev, pcm);
 
@@ -561,6 +570,19 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 		goto err3;
 	}
 
+#ifdef  CONFIG_SND_SAMSUNG_PCM_USE_I2S1_MCLK 
+	void __iomem    *regtmp;
+
+        regtmp = ioremap(S5PV210_PA_IIS1, 0x100);
+        if (regtmp == NULL) {
+                dev_err(&pdev->dev, "cannot ioremap IIS1 from PCM\n");
+		goto end1;
+        }
+
+	writel(0x400, regtmp + 0x4);	//IISMOD bit12=0, bit10=1
+	writel(0x0, regtmp + 0xc);	//IISPSR=0//desable deviders	
+end1:
+#endif
 	pcm->pclk = clk_get(&pdev->dev, "pcm");
 	if (IS_ERR(pcm->pclk)) {
 		dev_err(&pdev->dev, "failed to get pcm_clock\n");
@@ -568,6 +590,24 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 		goto err4;
 	}
 	clk_enable(pcm->pclk);
+        fout_epll = clk_get(&pdev->dev, "fout_epll");
+        if (IS_ERR(fout_epll))
+                dev_err(&pdev->dev, "failed to get fout_epll\n");
+
+        mout_epll = clk_get(&pdev->dev, "mout_epll");
+        if (IS_ERR(mout_epll))
+                dev_err(&pdev->dev, "failed to get mout_epll\n");
+        clk_set_parent(mout_epll, fout_epll);
+
+        sclk_audio = clk_get(&pdev->dev, "sclk_audio");
+        if (IS_ERR(sclk_audio))
+                dev_err(&pdev->dev, "failed to get sclk_audio\n");
+        clk_set_parent(sclk_audio, mout_epll);
+
+        /* Need not to enable in general */
+        clk_enable(sclk_audio);
+
+pcm->cclk = sclk_audio;
 
 	ret = snd_soc_register_dai(&pdev->dev, &s3c_pcm_dai[pdev->id]);
 	if (ret != 0) {

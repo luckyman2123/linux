@@ -534,10 +534,10 @@ static int wm8580_paif_hw_params(struct snd_pcm_substream *substream,
 
 		snd_soc_update_bits(codec, WM8580_PAIF3, WM8580_DACOSR, osr);
 	}
-
-	snd_soc_update_bits(codec, WM8580_PAIF1 + dai->driver->id,
-			    WM8580_AIF_RATE_MASK | WM8580_AIF_BCLKSEL_MASK,
-			    paifa);
+	
+	//snd_soc_update_bits(codec, WM8580_PAIF1 + dai->driver->id,
+	//		    WM8580_AIF_RATE_MASK | WM8580_AIF_BCLKSEL_MASK,
+	//		    paifa); //todo ...need to check
 	snd_soc_update_bits(codec, WM8580_PAIF3 + dai->driver->id,
 			    WM8580_AIF_LENGTH_MASK, paifb);
 	return 0;
@@ -736,7 +736,8 @@ static int wm8580_set_sysclk(struct snd_soc_dai *dai, int clk_id,
 	/* We really should validate PLL settings but not yet */
 	wm8580->sysclk[dai->driver->id] = freq;
 
-	return snd_soc_update_bits(codec, WM8580_CLKSEL, sel_mask, sel);
+	//return snd_soc_update_bits(codec, WM8580_CLKSEL, sel_mask, sel); //todo ...need to check
+	return 0;
 }
 
 static int wm8580_digital_mute(struct snd_soc_dai *codec_dai, int mute)
@@ -826,7 +827,7 @@ static struct snd_soc_dai_driver wm8580_dai[] = {
 		.id	=	WM8580_DAI_PAIFTX,
 		.capture = {
 			.stream_name = "Capture",
-			.channels_min = 2,
+			.channels_min = 1,
 			.channels_max = 2,
 			.rates = SNDRV_PCM_RATE_8000_192000,
 			.formats = WM8580_FORMATS,

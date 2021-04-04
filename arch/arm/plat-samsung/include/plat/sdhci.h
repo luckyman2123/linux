@@ -99,6 +99,8 @@ extern void s3c_sdhci1_set_platdata(struct s3c_sdhci_platdata *pd);
 extern void s3c_sdhci2_set_platdata(struct s3c_sdhci_platdata *pd);
 extern void s3c_sdhci3_set_platdata(struct s3c_sdhci_platdata *pd);
 
+extern void s5pv210_setup_sdhci3_cfg_gpio(struct platform_device *dev, int width);
+
 /* Default platform data, exported so that per-cpu initialisation can
  * set the correct one when there are more than one cpu type selected.
 */

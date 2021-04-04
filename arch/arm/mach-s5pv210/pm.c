@@ -25,6 +25,7 @@
 
 #include <mach/regs-irq.h>
 #include <mach/regs-clock.h>
+#include <mach/regs-gpio.h>
 
 static struct sleep_save s5pv210_core_save[] = {
 	/* Clock source */
@@ -130,6 +131,29 @@ static void s5pv210_pm_prepare(void)
 	tmp |= S5P_OTHER_SYSC_INTOFF;
 	__raw_writel(tmp, S5P_OTHERS);
 
+	__raw_writel(0xffffffff, (VA_VIC0 + VIC_INT_ENABLE_CLEAR));
+        __raw_writel(0xffffffff, (VA_VIC1 + VIC_INT_ENABLE_CLEAR));
+        __raw_writel(0xffffffff, (VA_VIC2 + VIC_INT_ENABLE_CLEAR));
+        __raw_writel(0xffffffff, (VA_VIC3 + VIC_INT_ENABLE_CLEAR));
+	
+	tmp = __raw_readl(S5P_EINT_CON(3));
+	tmp &= ~(7<<28);
+	tmp |= (2<<28);
+	__raw_writel(tmp,S5P_EINT_CON(3));
+
+	tmp = __raw_readl(S5PV210_GPH3_BASE + 0x8);
+	tmp &= ~(3 << 14);
+	tmp |= (2 << 14);
+	__raw_writel(tmp,(S5PV210_GPH3_BASE + 0x8));
+	
+	tmp = __raw_readl(S5PV210_GPH3_BASE);
+	tmp |= 0xF0000000;
+	__raw_writel(tmp,S5PV210_GPH3_BASE);
+
+	tmp = __raw_readl(S5P_EINT_WAKEUP_MASK);
+	tmp &= ~(1<<31);
+	__raw_writel(tmp,S5P_EINT_WAKEUP_MASK);
+	
 	s3c_pm_do_save(s5pv210_core_save, ARRAY_SIZE(s5pv210_core_save));
 }
 

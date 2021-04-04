@@ -642,6 +642,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  * @member:	the name of the member within the struct.
  *
  */
+//由小到大 __mptr是指向member类型的一个指针, offsetof是指成员在结构体中的偏移, 减去偏移即可得到结构体的位置
 #define container_of(ptr, type, member) ({			\
 	const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
 	(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -735,5 +736,8 @@ extern int __build_bug_on_failed;
 #ifdef CONFIG_FTRACE_MCOUNT_RECORD
 # define REBUILD_DUE_TO_FTRACE_MCOUNT_RECORD
 #endif
+
+/* To identify board information in panic logs, set this */
+extern char *mach_panic_string;
 
 #endif

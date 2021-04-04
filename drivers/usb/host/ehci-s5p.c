@@ -14,10 +14,12 @@
 
 #include <linux/clk.h>
 #include <linux/platform_device.h>
-#include <mach/regs-pmu.h>
 #include <plat/cpu.h>
 #include <plat/ehci.h>
 #include <plat/usb-phy.h>
+
+#define INSNREG00(base) (base + 0x90)
+#define ENA_DMA_INCR  	(0xF << 16)
 
 struct s5p_ehci_hcd {
 	struct device *dev;
@@ -56,6 +58,14 @@ static const struct hc_driver s5p_ehci_hc_driver = {
 	.clear_tt_buffer_complete	= ehci_clear_tt_buffer_complete,
 };
 
+static int s5p_ehci_configure(struct usb_hcd *hcd)
+{
+        /* DMA burst Enable */
+        writel(readl(INSNREG00(hcd->regs)) | ENA_DMA_INCR,
+                        INSNREG00(hcd->regs));
+        return 0;
+}
+
 static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 {
 	struct s5p_ehci_platdata *pdata;
@@ -86,6 +96,7 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 		goto fail_hcd;
 	}
 
+	s5p_ehci->hcd = hcd;
 	s5p_ehci->clk = clk_get(&pdev->dev, "usbhost");
 
 	if (IS_ERR(s5p_ehci->clk)) {
@@ -134,6 +145,8 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 
 	/* cache this readonly data; minimize chip reads */
 	ehci->hcs_params = readl(&ehci->caps->hcs_params);
+
+	s5p_ehci_configure(hcd);
 
 	err = usb_add_hcd(hcd, irq, IRQF_DISABLED | IRQF_SHARED);
 	if (err) {
@@ -188,11 +201,107 @@ static void s5p_ehci_shutdown(struct platform_device *pdev)
 	if (hcd->driver->shutdown)
 		hcd->driver->shutdown(hcd);
 }
+#ifdef CONFIG_PM
+static int s5p_ehci_suspend(struct platform_device *pdev,
+		pm_message_t message)
+{
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
+	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	unsigned long flags;
+	if (time_before(jiffies, ehci->next_statechange))
+                msleep(10);
 
+        /* Root hub was already suspended. Disable irq emission and
+ *          * mark HW unaccessible.  The PM and USB cores make sure that
+ *                   * the root hub is either suspended or stopped.
+ *                            */
+        ehci_prepare_ports_for_controller_suspend(ehci, device_may_wakeup(&pdev->dev));
+        spin_lock_irqsave(&ehci->lock, flags);
+        ehci_writel(ehci, 0, &ehci->regs->intr_enable);
+        (void)ehci_readl(ehci, &ehci->regs->intr_enable);
+
+        clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+        spin_unlock_irqrestore(&ehci->lock, flags);
+
+	if (pdata && pdata->phy_exit)
+                pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
+
+	clk_disable(s5p_ehci->clk);
+	
+	return 0;
+}
+static int s5p_ehci_resume(struct platform_device *pdev)
+{
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
+        struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+
+        clk_enable(s5p_ehci->clk);
+
+        if (pdata && pdata->phy_init)
+                pdata->phy_init(pdev, S5P_USB_PHY_HOST);
+	
+	s5p_ehci_configure(hcd);
+	
+	if (time_before(jiffies, ehci->next_statechange))
+                msleep(100);
+        
+        /* Mark hardware accessible again as we are out of D3 state by now */
+        set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+        
+        /* If CF is still set, we maintained PCI Vaux power.
+ *          * Just undo the effect of ehci_pci_suspend().
+ *                   */
+        if (ehci_readl(ehci, &ehci->regs->configured_flag) == FLAG_CF) {
+                int     mask = INTR_MASK;
+        
+                ehci_prepare_ports_for_controller_resume(ehci);
+                if (!hcd->self.root_hub->do_remote_wakeup)
+                        mask &= ~STS_PCD;
+                ehci_writel(ehci, mask, &ehci->regs->intr_enable);
+                ehci_readl(ehci, &ehci->regs->intr_enable);
+                return 0;
+        }
+        
+        ehci_dbg(ehci, "lost power, restarting\n");
+        usb_root_hub_lost_power(hcd->self.root_hub);
+
+        /* Else reset, to cope with power loss or flush-to-storage
+ *          * style "resume" having let BIOS kick in during reboot.
+ *                   */
+        (void) ehci_halt(ehci);
+        (void) ehci_reset(ehci);
+
+        /* emptying the schedule aborts any urbs */
+        spin_lock_irq(&ehci->lock);
+        if (ehci->reclaim)
+                end_unlink_async(ehci);
+        ehci_work(ehci);
+        spin_unlock_irq(&ehci->lock);
+
+        ehci_writel(ehci, ehci->command, &ehci->regs->command);
+        ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
+        ehci_readl(ehci, &ehci->regs->command); /* unblock posted writes */
+
+        /* here we "know" root ports should always stay powered */
+        ehci_port_power(ehci, 1);
+
+        hcd->state = HC_STATE_SUSPENDED;
+	
+	return 0;
+}
+#endif
 static struct platform_driver s5p_ehci_driver = {
 	.probe		= s5p_ehci_probe,
 	.remove		= __devexit_p(s5p_ehci_remove),
 	.shutdown	= s5p_ehci_shutdown,
+#ifdef CONFIG_PM
+	.suspend	= s5p_ehci_suspend,
+	.resume		= s5p_ehci_resume,	
+#endif
 	.driver = {
 		.name	= "s5p-ehci",
 		.owner	= THIS_MODULE,

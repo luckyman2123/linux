@@ -61,7 +61,6 @@ static void i915_write_hws_pga(struct drm_device *dev)
 static int i915_init_phys_hws(struct drm_device *dev)
 {
 	drm_i915_private_t *dev_priv = dev->dev_private;
-	struct intel_ring_buffer *ring = LP_RING(dev_priv);
 
 	/* Program Hardware Status Page */
 	dev_priv->status_page_dmah =
@@ -71,10 +70,9 @@ static int i915_init_phys_hws(struct drm_device *dev)
 		DRM_ERROR("Can not allocate hardware status page\n");
 		return -ENOMEM;
 	}
-	ring->status_page.page_addr =
-		(void __force __iomem *)dev_priv->status_page_dmah->vaddr;
 
-	memset_io(ring->status_page.page_addr, 0, PAGE_SIZE);
+	memset_io((void __force __iomem *)dev_priv->status_page_dmah->vaddr,
+		  0, PAGE_SIZE);
 
 	i915_write_hws_pga(dev);
 
@@ -1943,7 +1941,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	if (!dev_priv->mm.gtt) {
 		DRM_ERROR("Failed to initialize GTT\n");
 		ret = -ENODEV;
-		goto out_iomapfree;
+		goto out_rmmap;
 	}
 
 	agp_size = dev_priv->mm.gtt->gtt_mappable_entries << PAGE_SHIFT;
@@ -1987,7 +1985,7 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	if (dev_priv->wq == NULL) {
 		DRM_ERROR("Failed to create our workqueue.\n");
 		ret = -ENOMEM;
-		goto out_iomapfree;
+		goto out_mtrrfree;
 	}
 
 	/* enable GEM by default */
@@ -2074,13 +2072,21 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	return 0;
 
 out_gem_unload:
+	if (dev_priv->mm.inactive_shrinker.shrink)
+		unregister_shrinker(&dev_priv->mm.inactive_shrinker);
+
 	if (dev->pdev->msi_enabled)
 		pci_disable_msi(dev->pdev);
 
 	intel_teardown_gmbus(dev);
 	intel_teardown_mchbar(dev);
 	destroy_workqueue(dev_priv->wq);
-out_iomapfree:
+out_mtrrfree:
+	if (dev_priv->mm.gtt_mtrr >= 0) {
+		mtrr_del(dev_priv->mm.gtt_mtrr, dev->agp->base,
+			 dev->agp->agp_info.aper_size * 1024 * 1024);
+		dev_priv->mm.gtt_mtrr = -1;
+	}
 	io_mapping_free(dev_priv->mm.gtt_mapping);
 out_rmmap:
 	pci_iounmap(dev->pdev, dev_priv->regs);

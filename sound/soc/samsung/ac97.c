@@ -35,6 +35,7 @@ struct s3c_ac97_info {
 	void __iomem	   *regs;
 	struct mutex       lock;
 	struct completion  done;
+	u32 ac_codec_cmd;
 };
 static struct s3c_ac97_info s3c_ac97;
 
@@ -228,13 +229,44 @@ static int s3c_ac97_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct s3c_dma_params *dma_data;
+	struct snd_soc_codec *codec = dai->codec;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		dma_data = &s3c_ac97_pcm_out;
 	else
-		dma_data = &s3c_ac97_pcm_in;
+	{
+		#if defined(CONFIG_SOUND_WM9713_INPUT_STREAM_MIC)
+			dma_data = &s3c_ac97_mic_in;
+		#else
+			dma_data = &s3c_ac97_pcm_in;
+		#endif
+	}
+
+	if (params_channels(params) == 1)
+		dma_data->dma_size = 2;
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
+	
+	s3c_ac97_write(codec,0x26,0x0);
+	s3c_ac97_write(codec, 0x0c, 0x0808);
+	s3c_ac97_write(codec,0x3c, 0xf803);
+	s3c_ac97_write(codec,0x3e,0xb990);
+	s3c_ac97_write(codec,0x62,0xda83);//Ìí¼ÓÄÚÈÝ
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		s3c_ac97_write(codec, 0x02, 0x0404);//8080
+		s3c_ac97_write(codec, 0x04, 0x0606);
+		s3c_ac97_write(codec,0x1c, 0x12aa);//00aa
+	} else {
+		s3c_ac97_write(codec, 0x12, 0x0f0f);	/* Record Gain */
+#ifdef CONFIG_SOUND_WM9713_INPUT_STREAM_MIC	/* Input Stream is MIC-IN */
+		s3c_ac97_write(codec,0x5c,0x2);
+		s3c_ac97_write(codec,0x10,0x68);
+		s3c_ac97_write(codec,0x14,0xfe00);
+		printk("\n\tCONFIG_SOUND_WM9713_INPUT_STREAM_MIC\n");
+#else						/* Input Stream is LINE-IN : SMDKC110 default */
+		s3c_ac97_write(codec, 0x14, 0xd612);
+#endif /* CONFIG_SOUND_WM9713_INPUT_STREAM_MIC */
+        }
 
 	return 0;
 }
@@ -249,7 +281,11 @@ static int s3c_ac97_trigger(struct snd_pcm_substream *substream, int cmd,
 
 	ac_glbctrl = readl(s3c_ac97.regs + S3C_AC97_GLBCTRL);
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+#if defined(CONFIG_SOUND_WM9713_INPUT_STREAM_MIC)
+		ac_glbctrl &= ~S3C_AC97_GLBCTRL_MICINTM_MASK;
+#else
 		ac_glbctrl &= ~S3C_AC97_GLBCTRL_PCMINTM_MASK;
+#endif /* CONFIG_SOUND_WM9713_INPUT_STREAM_MIC */
 	else
 		ac_glbctrl &= ~S3C_AC97_GLBCTRL_PCMOUTTM_MASK;
 
@@ -258,7 +294,11 @@ static int s3c_ac97_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+#if defined(CONFIG_SOUND_WM9713_INPUT_STREAM_MIC)
+			ac_glbctrl |= S3C_AC97_GLBCTRL_MICINTM_DMA;
+#else
 			ac_glbctrl |= S3C_AC97_GLBCTRL_PCMINTM_DMA;
+#endif /* CONFIG_SOUND_WM9713_INPUT_STREAM_MIC */
 		else
 			ac_glbctrl |= S3C_AC97_GLBCTRL_PCMOUTTM_DMA;
 		break;
@@ -322,6 +362,18 @@ static int s3c_ac97_mic_trigger(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int s3c_ac97_suspend(struct snd_soc_dai *dai)
+{
+	s3c_ac97.ac_codec_cmd = readl(s3c_ac97.regs + S3C_AC97_CODEC_CMD);
+	return 0;
+}
+
+static int s3c_ac97_resume(struct snd_soc_dai *dai)
+{
+	writel(s3c_ac97.ac_codec_cmd, s3c_ac97.regs + S3C_AC97_CODEC_CMD);
+	return 0;
+}
+
 static struct snd_soc_dai_ops s3c_ac97_dai_ops = {
 	.hw_params	= s3c_ac97_hw_params,
 	.trigger	= s3c_ac97_trigger,
@@ -336,15 +388,17 @@ static struct snd_soc_dai_driver s3c_ac97_dai[] = {
 	[S3C_AC97_DAI_PCM] = {
 		.name =	"samsung-ac97",
 		.ac97_control = 1,
+		.suspend = s3c_ac97_suspend,
+		.resume = s3c_ac97_resume,
 		.playback = {
 			.stream_name = "AC97 Playback",
-			.channels_min = 2,
+			.channels_min = 1,
 			.channels_max = 2,
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,},
 		.capture = {
 			.stream_name = "AC97 Capture",
-			.channels_min = 2,
+			.channels_min = 1,
 			.channels_max = 2,
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,},
@@ -356,7 +410,7 @@ static struct snd_soc_dai_driver s3c_ac97_dai[] = {
 		.capture = {
 			.stream_name = "AC97 Mic Capture",
 			.channels_min = 1,
-			.channels_max = 1,
+			.channels_max = 2,
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,},
 		.ops = &s3c_ac97_mic_dai_ops,

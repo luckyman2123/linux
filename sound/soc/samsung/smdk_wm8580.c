@@ -11,13 +11,16 @@
  */
 
 #include <sound/soc.h>
+#include <linux/clk.h>
 #include <sound/pcm_params.h>
 
 #include <asm/mach-types.h>
+#include <mach/regs-clock.h>
+
 
 #include "../codecs/wm8580.h"
 #include "i2s.h"
-
+#include "s3c-i2s-v2.h"
 /*
  * Default CFG switch settings to use this driver:
  *
@@ -34,7 +37,8 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	unsigned int pll_out;
-	int bfs, rfs, ret;
+	int bfs, rfs, psr, ret;
+	struct clk    *clk_epll;
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_U8:
@@ -76,22 +80,94 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 	default:
 		return -EINVAL;
 	}
+
 	pll_out = params_rate(params) * rfs;
+
+	switch (pll_out) {
+        case 4096000:
+        case 5644800:
+        case 6144000:
+        case 8467200:
+        case 9216000:
+                psr = 8;
+                break;
+        case 8192000:
+        case 11289600:
+        case 12288000:
+        case 16934400:
+        case 18432000:
+                psr = 4;
+                break;
+        case 22579200:
+        case 24576000:
+        case 33868800:
+        case 36864000:
+                psr = 2;
+                break;
+        case 67737600:
+        case 73728000:
+                psr = 1;
+                break;
+        default:
+                printk("Not yet supported!\n");
+                return -EINVAL;
+        }
+
+	clk_epll = clk_get(NULL, "fout_epll");
+        if (IS_ERR(clk_epll)) {
+                printk(KERN_ERR
+                        "failed to get fout_epll\n");
+                return -EBUSY;
+        }
+
+	pll_out *= psr;
+
+	clk_set_rate(clk_epll, pll_out);
+
+
+	
+//	printk("PSR=%d RFS=%d BFS=%d\n",psr, rfs, bfs);
 
 	/* Set the Codec DAI configuration */
 	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S
 					 | SND_SOC_DAIFMT_NB_NF
-					 | SND_SOC_DAIFMT_CBM_CFM);
+					 | SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
 
 	/* Set the AP DAI configuration */
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S
 					 | SND_SOC_DAIFMT_NB_NF
-					 | SND_SOC_DAIFMT_CBM_CFM);
+					 | SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
+	
+        /* Set the AP BFS */
+        ret = snd_soc_dai_set_clkdiv(cpu_dai, S3C_I2SV2_DIV_BCLK, bfs);
 
+        if (ret < 0) {
+                printk(KERN_ERR
+                        "smdkv210 : AP bfs setting error!\n");
+                return ret;
+        }
+
+	 ret = snd_soc_dai_set_sysclk(cpu_dai, SAMSUNG_I2S_RCLKSRC_1,
+                                        params_rate(params), SND_SOC_CLOCK_OUT);
+        if (ret < 0){
+                printk(KERN_ERR
+                        "smdkv210 : AP set_sysclk  setting error!\n");
+                return ret;
+	}
+	 
+	ret = snd_soc_dai_set_sysclk(cpu_dai, SAMSUNG_I2S_OPCLK,
+                                        params_rate(params), OPCLK_BUSCLK);
+        if (ret < 0){
+                printk(KERN_ERR
+                        "smdkv210 : AP OP_CLK setting error!\n");
+                return ret;
+	}
+
+#if 0 //pll configurations are not required when 8580 is operating in slave mode 
 	/* Set WM8580 to drive MCLK from its PLLA */
 	ret = snd_soc_dai_set_clkdiv(codec_dai, WM8580_MCLK,
 					WM8580_CLKSRC_PLLA);
@@ -103,11 +179,13 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
+#endif
+	pll_out /= psr;
 	ret = snd_soc_dai_set_sysclk(codec_dai, WM8580_CLKSRC_PLLA,
 				     pll_out, SND_SOC_CLOCK_IN);
 	if (ret < 0)
 		return ret;
-
+	clk_put(clk_epll);
 	return 0;
 }
 
@@ -224,6 +302,7 @@ static struct snd_soc_dai_link smdk_dai[] = {
 		.init = smdk_wm8580_init_paiftx,
 		.ops = &smdk_ops,
 	},
+#if 0 
 	[SEC_PLAYBACK] = { /* Sec_Fifo Playback i/f */
 		.name = "Sec_FIFO TX",
 		.stream_name = "Playback",
@@ -234,6 +313,7 @@ static struct snd_soc_dai_link smdk_dai[] = {
 		.init = smdk_wm8580_init_paifrx,
 		.ops = &smdk_ops,
 	},
+#endif
 };
 
 static struct snd_soc_card smdk = {
@@ -249,8 +329,11 @@ static int __init smdk_audio_init(void)
 	int ret;
 	char *str;
 
+//ToDO:	Need to do further implementation
+#if 0
 	if (machine_is_smdkc100()
 			|| machine_is_smdkv210() || machine_is_smdkc110()) {
+	if(1){
 		smdk.num_links = 3;
 		/* Secondary is at offset SAMSUNG_I2S_SECOFF from Primary */
 		str = (char *)smdk_dai[SEC_PLAYBACK].cpu_dai_name;
@@ -261,7 +344,7 @@ static int __init smdk_audio_init(void)
 		str = (char *)smdk_dai[PRI_CAPTURE].cpu_dai_name;
 		str[strlen(str) - 1] = '2';
 	}
-
+#endif
 	smdk_snd_device = platform_device_alloc("soc-audio", -1);
 	if (!smdk_snd_device)
 		return -ENOMEM;
@@ -269,8 +352,9 @@ static int __init smdk_audio_init(void)
 	platform_set_drvdata(smdk_snd_device, &smdk);
 	ret = platform_device_add(smdk_snd_device);
 
-	if (ret)
+	if (ret){
 		platform_device_put(smdk_snd_device);
+	}
 
 	return ret;
 }

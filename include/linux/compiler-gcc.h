@@ -91,6 +91,9 @@
 #define __gcc_header(x) #x
 #define _gcc_header(x) __gcc_header(linux/compiler-gcc##x.h)
 #define gcc_header(x) _gcc_header(x)
+/* command by clark :: 这是什么写法 __GNUC__ 、__GNUC_MINOR__ 、__GNUC_PATCHLEVEL__分别代表gcc的主版本号，次版本号，修正版本号 */
+/* comment by clark :: 多重替换 */
+/* comment by clark :: https://gcc.gnu.org/onlinedocs/ */
 #include gcc_header(__GNUC__)
 
 #if !defined(__noclone)

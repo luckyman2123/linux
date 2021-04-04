@@ -528,7 +528,11 @@ static int vlan_dev_init(struct net_device *dev)
 					  (1<<__LINK_STATE_DORMANT))) |
 		      (1<<__LINK_STATE_PRESENT);
 
-	dev->hw_features = NETIF_F_ALL_TX_OFFLOADS;
+	dev->hw_features = NETIF_F_ALL_CSUM | NETIF_F_SG |
+			   NETIF_F_FRAGLIST | NETIF_F_ALL_TSO |
+			   NETIF_F_HIGHDMA | NETIF_F_SCTP_CSUM |
+			   NETIF_F_ALL_FCOE;
+
 	dev->features |= real_dev->vlan_features | NETIF_F_LLTX;
 	dev->gso_max_size = real_dev->gso_max_size;
 
@@ -690,7 +694,7 @@ void vlan_setup(struct net_device *dev)
 	ether_setup(dev);
 
 	dev->priv_flags		|= IFF_802_1Q_VLAN;
-	dev->priv_flags		&= ~IFF_XMIT_DST_RELEASE;
+	dev->priv_flags		&= ~(IFF_XMIT_DST_RELEASE | IFF_TX_SKB_SHARING);
 	dev->tx_queue_len	= 0;
 
 	dev->netdev_ops		= &vlan_netdev_ops;

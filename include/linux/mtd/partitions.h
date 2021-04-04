@@ -94,4 +94,5 @@ int mtd_add_partition(struct mtd_info *master, char *name,
 		      long long offset, long long length);
 int mtd_del_partition(struct mtd_info *master, int partno);
 
+int add_mtd_partitions(struct mtd_info *, const struct mtd_partition *, int);
 #endif

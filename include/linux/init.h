@@ -40,7 +40,9 @@
 
 /* These are for everybody (although not all archs will actually
    discard it in modules) */
+// comment by clark __section(.init.text) : 这个 Section 在内核完成初始化之后，就会被释放掉
 #define __init		__section(.init.text) __cold notrace
+// comment by clark __section(.init.data) 这个Section 在内核完成初始化之后，会释放掉。
 #define __initdata	__section(.init.data)
 #define __initconst	__section(.init.rodata)
 #define __exitdata	__section(.exit.data)

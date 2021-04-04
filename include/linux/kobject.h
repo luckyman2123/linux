@@ -57,14 +57,20 @@ enum kobject_action {
 	KOBJ_MAX
 };
 
+//kobject始终代表sysfs文件系统中的一个目录,name成员指定了目录名,不是文件
+//kset是具有相同类型的kobject的集合,像驱动程序放在/sys/driver目录下一样,目录drivers是一个kset对象，包含系统中驱动程序对应的目录，驱动程序的目录有kboject表示
+//。内核将相似的kboject结构连接在kset集合中。
+
+
+
 struct kobject {
-	const char		*name;
-	struct list_head	entry;
-	struct kobject		*parent;
-	struct kset		*kset;
-	struct kobj_type	*ktype;
-	struct sysfs_dirent	*sd;
-	struct kref		kref;
+	const char		*name;			//kobject的名称,kobject在sysfs中的名字
+	struct list_head	entry;		//双向链表
+	struct kobject		*parent;	//kobject的父类,kobject的父节点
+	struct kset		*kset;			//kobject所属的kset, kset对应的也是/sys下的一个目录
+	struct kobj_type	*ktype;		//kobject的类型信息,属性,属性用文件来表示, 放在kobject对应目录下
+	struct sysfs_dirent	*sd;		//
+	struct kref		kref;			//引用次数
 	unsigned int state_initialized:1;
 	unsigned int state_in_sysfs:1;
 	unsigned int state_add_uevent_sent:1;
@@ -158,11 +164,13 @@ struct sock;
  * can add new environment variables, or filter out the uevents if so
  * desired.
  */
+
+//一组kobjects列表 
 struct kset {
-	struct list_head list;
+	struct list_head list;			//kobjects列表
 	spinlock_t list_lock;
-	struct kobject kobj;
-	const struct kset_uevent_ops *uevent_ops;
+	struct kobject kobj;			//kset本身也是一个kobject
+	const struct kset_uevent_ops *uevent_ops;	
 };
 
 extern void kset_init(struct kset *kset);

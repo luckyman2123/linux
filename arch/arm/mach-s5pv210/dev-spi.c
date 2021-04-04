@@ -51,7 +51,7 @@ static int s5pv210_spi_cfg_gpio(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	s3c_gpio_cfgall_range(base, 3,
+	s3c_gpio_cfgall_range(base, 4,
 			      S3C_GPIO_SFN(2), S3C_GPIO_PULL_UP);
 
 	return 0;

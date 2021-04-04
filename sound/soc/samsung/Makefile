@@ -7,6 +7,9 @@ snd-soc-s3c-i2s-v2-objs := s3c-i2s-v2.o
 snd-soc-samsung-spdif-objs := spdif.o
 snd-soc-pcm-objs := pcm.o
 snd-soc-i2s-objs := i2s.o
+snd-soc-s3c-idma-objs := s3c-idma.o
+snd-soc-s3c-dma-wrapper-objs := s3c-dma-wrapper.o
+snd-soc-s5p-i2s_sec-objs := s5p-i2s_sec.o
 
 obj-$(CONFIG_SND_SOC_SAMSUNG) += snd-soc-s3c24xx.o
 obj-$(CONFIG_SND_S3C24XX_I2S) += snd-soc-s3c24xx-i2s.o
@@ -16,6 +19,9 @@ obj-$(CONFIG_SND_S3C_I2SV2_SOC) += snd-soc-s3c-i2s-v2.o
 obj-$(CONFIG_SND_SAMSUNG_SPDIF) += snd-soc-samsung-spdif.o
 obj-$(CONFIG_SND_SAMSUNG_PCM) += snd-soc-pcm.o
 obj-$(CONFIG_SND_SAMSUNG_I2S) += snd-soc-i2s.o
+obj-$(CONFIG_SND_SAMSUNG_I2S) += snd-soc-s3c-dma-wrapper.o
+obj-$(CONFIG_S5P_INTERNAL_DMA) += snd-soc-s3c-idma.o
+obj-$(CONFIG_S5P_INTERNAL_DMA) += snd-soc-s5p-i2s_sec.o
 
 # S3C24XX Machine Support
 snd-soc-jive-wm8750-objs := jive_wm8750.o
@@ -37,6 +43,13 @@ snd-soc-smdk-spdif-objs := smdk_spdif.o
 snd-soc-smdk-wm8580pcm-objs := smdk_wm8580pcm.o
 snd-soc-speyside-objs := speyside.o
 
+
+obj-$(CONFIG_SND_S5PV2XX_SOC_WM8960) += snd-soc-s3c-idma.o
+obj-$(CONFIG_SND_S5PV2XX_SOC_WM8960) += snd-soc-i2s.o
+#snd-soc-wm8960-objs := wm8960.o
+#obj-$(CONFIG_SND_SOC_WM8960_FS210) += snd-soc-wm8960.o
+#snd-soc-fs210-wm8960-objs := fs210_wm8960.o
+#obj-$(CONFIG_SND_S5PV2XX_SOC_WM8960) += snd-soc-fs210-wm8960.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_JIVE_WM8750) += snd-soc-jive-wm8750.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_NEO1973_WM8753) += snd-soc-neo1973-wm8753.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_SMDK2443_WM9710) += snd-soc-smdk2443-wm9710.o

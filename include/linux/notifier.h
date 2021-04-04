@@ -48,9 +48,9 @@
  */
 
 struct notifier_block {
-	int (*notifier_call)(struct notifier_block *, unsigned long, void *);
+	int (*notifier_call)(struct notifier_block *, unsigned long, void *);   //回调方法
 	struct notifier_block __rcu *next;
-	int priority;
+	int priority;					//优化级
 };
 
 struct atomic_notifier_head {

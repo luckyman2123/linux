@@ -801,6 +801,8 @@ static void device_remove_class_symlinks(struct device *dev)
  * @dev: device
  * @fmt: format string for the device's name
  */
+
+//最终调用kobject_set_name_vargs来设置底层的kobject的名字
 int dev_set_name(struct device *dev, const char *fmt, ...)
 {
 	va_list vargs;
@@ -863,7 +865,7 @@ static void device_remove_sys_dev_entry(struct device *dev)
 
 int device_private_init(struct device *dev)
 {
-	dev->p = kzalloc(sizeof(*dev->p), GFP_KERNEL);
+	dev->p = kzalloc(sizeof(*dev->p), GFP_KERNEL);  //解引与取成员变量运算之间的优化级sizeof(*(dev->p)) By Clark
 	if (!dev->p)
 		return -ENOMEM;
 	dev->p->device = dev;
@@ -873,7 +875,7 @@ int device_private_init(struct device *dev)
 }
 
 /**
- * device_add - add device to device hierarchy.
+ * device_add - add device to device hierarchy.层次体系
  * @dev: device.
  *
  * This is part 2 of device_register(), though may be called
@@ -893,7 +895,7 @@ int device_add(struct device *dev)
 	struct class_interface *class_intf;
 	int error = -EINVAL;
 
-	dev = get_device(dev);
+	dev = get_device(dev);		//增加dev的计数
 	if (!dev)
 		goto done;
 
@@ -920,7 +922,7 @@ int device_add(struct device *dev)
 
 	pr_debug("device: '%s': %s\n", dev_name(dev), __func__);
 
-	parent = get_device(dev->parent);
+	parent = get_device(dev->parent);    //增加父引用
 	setup_parent(dev, parent);
 
 	/* use parent numa_node */
@@ -1054,6 +1056,8 @@ int device_register(struct device *dev)
  * we do take care to provide for the case that we get a NULL
  * pointer passed in.
  */
+
+// 增加计数, 通过kobj来获取到dev
 struct device *get_device(struct device *dev)
 {
 	return dev ? to_dev(kobject_get(&dev->kobj)) : NULL;

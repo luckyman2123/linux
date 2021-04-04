@@ -3,6 +3,13 @@
  * Written by Martin Mares <mj@atrey.karlin.mff.cuni.cz>
  */
 
+
+// comment by clark :: asm 的路径是 arch/xxx/include/asm
+// comment by clark :: asm-generic的路径是 include/asm-generic
+// comment by clark :: 代码中包含asm/中的头文件，如果某一个架构没有自己特殊代码的话，其中会使用通用版本的头文件，
+// comment by clark :: 即包含 asm-generic/里的对应.h文件。
+// comment by clark :: 代码中不会直接包含 asm-generic/ 里的.h文件
+
 #include <asm-generic/vmlinux.lds.h>
 #include <asm/thread_info.h>
 #include <asm/memory.h>
@@ -27,8 +34,8 @@
 #define ARM_EXIT_KEEP(x)
 #endif
 
-OUTPUT_ARCH(arm)
-ENTRY(stext)
+OUTPUT_ARCH(arm)				/* 设置输出文件的体系架构 */
+ENTRY(stext)					/* 设置stext全局符号为入口地址 arch/arm/kernel/head.S 文件中*/
 
 #ifndef __ARMEB__
 jiffies = jiffies_64;

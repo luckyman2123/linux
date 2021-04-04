@@ -68,6 +68,7 @@ below:
 
  sounddefault
 
+	/* comment by clark :: Acron: 一家英国IT公司的名称, 英国的苹果 */
    Default sound setting on Acorn machines.  May be used differently by
    different architectures.
 
@@ -104,7 +105,7 @@ below:
    Start address in sectors of the ramdisk image on a floppy disk.
 
  system_rev
-
+	/* 系统版本信息 */
    system revision number.
 
  system_serial_low

@@ -23,17 +23,60 @@
 #include <linux/mtd/partitions.h>
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
+#include <linux/clk.h>
 
 #include <asm/mach/flash.h>
 #include <plat/regs-onenand.h>
 
 #include <linux/io.h>
 
+#include <asm/setup.h>
+#include <linux/string.h>
+
 enum soc_type {
 	TYPE_S3C6400,
 	TYPE_S3C6410,
 	TYPE_S5PC100,
 	TYPE_S5PC110,
+};
+
+struct mtd_partition s3c_partition_info[] = {
+	{
+		.name		= "misc",
+		.offset		= (768*SZ_1K),          /* for bootloader */
+		.size		= (256*SZ_1K),
+		.mask_flags	= MTD_CAP_NANDFLASH,
+	},
+	{
+		.name		= "recovery",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= (5*SZ_1M),
+	},
+	{
+		.name		= "kernel",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= (5*SZ_1M),
+	},
+	{
+		.name		= "ramdisk",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= (3*SZ_1M),
+	},
+	{
+		.name		= "system",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= (256*SZ_1M),
+	},
+	{
+		.name		= "cache",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= (64*SZ_1M),
+	},
+	{
+		.name		= "userdata",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= MTDPART_SIZ_FULL,
+	}
 };
 
 #define ONENAND_ERASE_STATUS		0x00
@@ -193,6 +236,57 @@ static void s3c_dump_reg(void)
 }
 #endif
 
+#if 1 
+struct slsi_ptbl_entry {
+	char name[16];
+	__u32 offset;
+	__u32 size;
+	__u32 flags;
+};
+
+struct mtd_partition *partitions;
+int num_partitions;
+
+#define MAX_PARTITIONS 12
+#define ATAG_SLSI_PARTITION 0x28247574
+struct mtd_partition slsi_nand_partitions[MAX_PARTITIONS];
+char slsi_nand_names[MAX_PARTITIONS * 16];
+
+static int __init parse_tag_partition(const struct tag *tag)
+{
+	struct mtd_partition *ptn = slsi_nand_partitions;
+	char *name = slsi_nand_names;
+	struct slsi_ptbl_entry *entry = (void *) &tag->u;
+	unsigned count, n;
+
+	count = (tag->hdr.size - 2) /
+		(sizeof(struct slsi_ptbl_entry) / sizeof(__u32));
+
+	if (count > MAX_PARTITIONS)
+		count = MAX_PARTITIONS;
+
+	for (n = 0; n < count; n++) {
+		memcpy(name, entry->name, 15);
+		name[15] = 0;
+		ptn->name = name;
+		ptn->offset = entry->offset;
+		ptn->size = entry->size;
+
+		printk(KERN_INFO "Partition (from atag) %15s -- Offset:0x%08x Size:0x%08x\n",
+				entry->name, entry->offset, entry->size);
+
+		name += 16;
+		entry++;
+		ptn++;
+	}
+
+	num_partitions = count;
+	partitions = slsi_nand_partitions;
+
+	return 0;
+}
+__tagtable(ATAG_SLSI_PARTITION, parse_tag_partition);
+#endif
 static unsigned int s3c64xx_cmd_map(unsigned type, unsigned val)
 {
 	return (type << S3C64XX_CMD_MAP_SHIFT) | val;
@@ -659,7 +753,7 @@ static int s5pc110_read_bufferram(struct mtd_info *mtd, int area,
 	}
 
 	if (offset & 3 || (size_t) buf & 3 ||
-		!onenand->dma_addr || count != mtd->writesize)
+		!onenand->dma_addr || count & 3)
 		goto normal;
 
 	/* Handle vmalloc address */
@@ -673,13 +767,11 @@ static int s5pc110_read_bufferram(struct mtd_info *mtd, int area,
 		if (!page)
 			goto normal;
 
-		/* Page offset */
-		ofs = ((size_t) buf & ~PAGE_MASK);
 		page_dma = 1;
 
 		/* DMA routine */
 		dma_src = onenand->phys_base + (p - this->base);
-		dma_dst = dma_map_page(dev, page, ofs, count, DMA_FROM_DEVICE);
+		dma_dst = dma_map_page(dev, page, 0, count, DMA_FROM_DEVICE);
 	} else {
 		/* DMA routine */
 		dma_src = onenand->phys_base + (p - this->base);
@@ -709,6 +801,82 @@ normal:
 
 	memcpy(buffer, p, count);
 
+	return 0;
+}
+
+static int s5pc110_write_bufferram(struct mtd_info *mtd, int area,
+				   const unsigned char *buffer, int offset,
+				   size_t count)
+{
+	struct onenand_chip *this = mtd->priv;
+	void __iomem *p;
+	void __iomem *bufferram;
+	void *buf = (void *) buffer;
+	dma_addr_t dma_src, dma_dst;
+	int err;
+
+	p = bufferram = this->base + area;
+	if (ONENAND_CURRENT_BUFFERRAM(this)) {
+		if (area == ONENAND_DATARAM)
+			p += this->writesize;
+		else
+			p += mtd->oobsize;
+	}
+
+	if (offset & 3 || (size_t) buf & 3 ||
+		!onenand->dma_addr || count & 3)
+		goto normal;
+
+	/* Handle vmalloc address */
+	if (buf >= high_memory) {
+		struct page *page;
+
+		if (((size_t) buf & PAGE_MASK) !=
+		    ((size_t) (buf + count - 1) & PAGE_MASK))
+			goto normal;
+		page = vmalloc_to_page(buf);
+		if (!page)
+			goto normal;
+		buf = page_address(page) + ((size_t) buf & ~PAGE_MASK);
+	}
+
+	dma_src = dma_map_single(&onenand->pdev->dev,
+			buf, count, DMA_TO_DEVICE);
+	if (dma_mapping_error(&onenand->pdev->dev, dma_src)) {
+		dev_err(&onenand->pdev->dev,
+			"Couldn't map a %d byte buffer for DMA\n", count);
+		goto normal;
+	}
+	dma_dst = onenand->phys_base + (p - this->base);
+
+	err = s5pc110_dma_ops((void *) dma_dst, (void *) dma_src,
+			count, S5PC110_DMA_DIR_WRITE);
+	dma_unmap_single(&onenand->pdev->dev, dma_src, count, DMA_TO_DEVICE);
+
+	if (!err)
+		return 0;
+	else
+		dev_err(&onenand->pdev->dev,
+			"Couldn't write a %d byte buffer for DMA\n", count);
+
+normal:
+	if (ONENAND_CHECK_BYTE_ACCESS(count)) {
+		unsigned short word;
+		int byte_offset;
+
+		/* Align with word(16-bit) size */
+		count--;
+
+		/* Calculate byte access offset */
+		byte_offset = offset + count;
+
+		/* Read word and save byte */
+		word = this->read_word(bufferram + byte_offset);
+		word = (word & ~0xff) | buffer[count];
+		this->write_word(word, bufferram + byte_offset);
+	}
+
+	memcpy(p + offset, buffer, count);
 	return 0;
 }
 
@@ -844,6 +1012,7 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 	} else if (onenand->type == TYPE_S5PC110) {
 		/* Use generic onenand functions */
 		this->read_bufferram = s5pc110_read_bufferram;
+		this->write_bufferram = s5pc110_write_bufferram;
 		this->chip_probe = s5pc110_chip_probe;
 		return;
 	} else {
@@ -1017,6 +1186,27 @@ static int s3c_onenand_probe(struct platform_device *pdev)
 	if (s3c_read_reg(MEM_CFG_OFFSET) & ONENAND_SYS_CFG1_SYNC_READ)
 		dev_info(&onenand->pdev->dev, "OneNAND Sync. Burst Read enabled\n");
 
+#ifdef CONFIG_MTD_CMDLINE_PARTS
+	err = parse_mtd_partitions(mtd, part_probes, &onenand->parts, 0);
+	if (err > 0)
+		mtd_device_register(mtd, onenand->parts, err);
+	else if (err <= 0 && pdata && pdata->parts)
+		mtd_device_register(mtd, pdata->parts, pdata->nr_parts);
+	else
+#endif
+	if (num_partitions <= 0) {
+		/* default partition table */
+		num_partitions = ARRAY_SIZE(s3c_partition_info);	/* pdata->nr_parts */
+		partitions = s3c_partition_info;			/* pdata->parts */
+	}
+
+	if (partitions && num_partitions > 0)
+		err = mtd_device_register(mtd, partitions, num_partitions);
+	else
+		err = mtd_device_register(mtd, NULL, 0);
+
+
+/*
 	err = parse_mtd_partitions(mtd, part_probes, &onenand->parts, 0);
 	if (err > 0)
 		mtd_device_register(mtd, onenand->parts, err);
@@ -1024,6 +1214,7 @@ static int s3c_onenand_probe(struct platform_device *pdev)
 		mtd_device_register(mtd, pdata->parts, pdata->nr_parts);
 	else
 		err = mtd_device_register(mtd, NULL, 0);
+*/
 
 	platform_set_drvdata(pdev, mtd);
 
@@ -1088,16 +1279,6 @@ static int __devexit s3c_onenand_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int s3c_pm_ops_suspend(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct mtd_info *mtd = platform_get_drvdata(pdev);
-	struct onenand_chip *this = mtd->priv;
-
-	this->wait(mtd, FL_PM_SUSPENDED);
-	return 0;
-}
-
 static  int s3c_pm_ops_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -1109,7 +1290,6 @@ static  int s3c_pm_ops_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops s3c_pm_ops = {
-	.suspend	= s3c_pm_ops_suspend,
 	.resume		= s3c_pm_ops_resume,
 };
 

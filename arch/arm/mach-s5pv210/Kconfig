@@ -56,8 +56,22 @@ config S5PV210_SETUP_SDHCI_GPIO
 
 config S5PV210_SETUP_FIMC
 	bool
+	depends on VIDEO_FIMC
+	default y
 	help
 	  Common setup code for the camera interfaces.
+
+config S5PV210_SETUP_USB_PHY
+        bool
+        help
+          Common setup code for USB PHY controller
+
+config S5PV210_POWER_DOMAIN
+	bool
+	depends on REGULATOR
+	default y
+	help
+	  Enable S5PV210 power domain support.
 
 menu "S5PC110 Machines"
 
@@ -109,6 +123,7 @@ config MACH_SMDKC110
 	select S3C_DEV_I2C2
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
+	select S5P_DEV_ONENAND
 	select SAMSUNG_DEV_IDE
 	select S5PV210_SETUP_I2C1
 	select S5PV210_SETUP_I2C2
@@ -133,9 +148,14 @@ config MACH_SMDKV210
 	select S3C_DEV_I2C2
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
+	select S3C64XX_DEV_SPI
 	select SAMSUNG_DEV_ADC
 	select SAMSUNG_DEV_IDE
 	select SAMSUNG_DEV_KEYPAD
+	select S5P_DEV_USB_HSDEVICE
+	select S5P_DEV_USB_OHCI
+	select S5P_DEV_USB_EHCI
+	select HAVE_PWM
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_TS
 	select S5PV210_SETUP_FB_24BPP
@@ -144,8 +164,74 @@ config MACH_SMDKV210
 	select S5PV210_SETUP_IDE
 	select S5PV210_SETUP_KEYPAD
 	select S5PV210_SETUP_SDHCI
+	select S5PV210_SETUP_USB_PHY
 	help
 	  Machine support for Samsung SMDKV210
+
+config MACH_FS210
+	bool "FS210"
+	select CPU_S5PV210
+	select S3C_DEV_FB
+	select S3C_DEV_HSMMC
+	select S3C_DEV_HSMMC1
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
+	select S3C_DEV_I2C1
+	select S3C_DEV_I2C2
+	select S3C_DEV_RTC
+	select S3C_DEV_WDT
+	select S3C64XX_DEV_SPI
+	select SAMSUNG_DEV_ADC
+	select SAMSUNG_DEV_IDE
+	select SAMSUNG_DEV_KEYPAD
+	select S5P_DEV_USB_HSDEVICE
+	select S5P_DEV_USB_OHCI
+	select S5P_DEV_USB_EHCI
+	select HAVE_PWM
+	select SAMSUNG_DEV_PWM
+	select SAMSUNG_DEV_TS
+	select S5PV210_SETUP_FB_24BPP
+	select S5PV210_SETUP_I2C1
+	select S5PV210_SETUP_I2C2
+	select S5PV210_SETUP_IDE
+	select S5PV210_SETUP_KEYPAD
+	select S5PV210_SETUP_SDHCI
+	select S5PV210_SETUP_USB_PHY
+	help
+	  Machine support for farsight FS210
+
+config MACH_SMDKC110
+	bool "SMDKC110"
+	select CPU_SMDKC110
+#	select ARCH_SPARSEMEM_ENABLE
+	select S3C_DEV_FB
+	select S3C_DEV_HSMMC
+	select S3C_DEV_HSMMC1
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
+	select S3C_DEV_I2C1
+	select S3C_DEV_I2C2
+	select S3C_DEV_RTC
+	select S3C_DEV_WDT
+	select S3C64XX_DEV_SPI
+	select SAMSUNG_DEV_ADC
+	select SAMSUNG_DEV_IDE
+	select SAMSUNG_DEV_KEYPAD
+	select S5P_DEV_USB_HSDEVICE
+	select S5P_DEV_USB_OHCI
+        select S5P_DEV_USB_EHCI
+	select HAVE_PWM
+	select SAMSUNG_DEV_PWM
+	select SAMSUNG_DEV_TS
+	select S5PV210_SETUP_FB_24BPP
+	select S5PV210_SETUP_I2C1
+	select S5PV210_SETUP_I2C2
+	select S5PV210_SETUP_IDE
+	select S5PV210_SETUP_KEYPAD
+	select S5PV210_SETUP_SDHCI
+	select S5PV210_SETUP_USB_PHY
+	help
+	  Machine support for Samsung SMDKC110
 
 config MACH_TORBRECK
 	bool "Torbreck"
@@ -172,4 +258,30 @@ config S5PV210_PM
 	help
 	  Power Management code common to S5PV210
 
+config S5PV210_SETUP_FIMC0
+	bool
+	depends on VIDEO_FIMC || CPU_FREQ
+	default y
+	help
+	  Common setup code for FIMC controller 0.
+
+config S5PV210_SETUP_FIMC1
+	bool
+	depends on VIDEO_FIMC || CPU_FREQ
+	default y
+	help
+	  Common setup code for FIMC controller 1.
+
+config S5PV210_SETUP_FIMC2
+	bool
+	depends on VIDEO_FIMC || CPU_FREQ
+	default y
+	help
+	  Common setup code for FIMC controller 2.
+config S5PV210_SETUP_CSIS
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for MIPI-CSIS
 endif

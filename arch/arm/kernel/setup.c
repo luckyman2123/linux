@@ -873,12 +873,13 @@ static struct machine_desc * __init setup_machine_tags(unsigned int nr)
 	return mdesc;
 }
 
+/* comment by clark :: call by start_kernel in main.c 文件 :: 2020-05-17*/
 
 void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
 
-	unwind_init();
+	unwind_init();		/* comment by clark :: unwind: 解开 堆栈展开、解压缩 */
 
 	setup_processor();
 	mdesc = setup_machine_fdt(__atags_pointer);

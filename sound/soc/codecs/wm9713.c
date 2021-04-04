@@ -946,6 +946,28 @@ static int wm9713_set_dai_fmt(struct snd_soc_dai *codec_dai,
 	return 0;
 }
 
+static int wm9713_hifi_hw_params(struct snd_pcm_substream *substream,
+				struct snd_pcm_hw_params *params,
+				struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	ac97_write(codec, AC97_POWERDOWN, 0x0000);
+	ac97_write(codec, AC97_PHONE, 0x0808);
+	ac97_write(codec, AC97_EXTENDED_MID, 0xf803);
+	ac97_write(codec, AC97_EXTENDED_MSTATUS, 0xb990);
+
+	ac97_write(codec, AC97_MASTER, 0x8080);
+	ac97_write(codec, AC97_HEADPHONE, 0x0606);
+	ac97_write(codec, AC97_REC_GAIN, 0x00aa);
+#ifdef CONFIG_SOUND_WM9713_INPUT_STREAM_MIC
+	ac97_write(codec, 0x5c, 0x0002);
+	ac97_write(codec, AC97_LINE, 0x0068);
+	ac97_write(codec, AC97_VIDEO, 0xfe00);
+#else
+	ac97_write(codec, AC97_VIDEO, 0xd612);
+#endif
+	return 0;
+}
 static int wm9713_pcm_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
 				struct snd_soc_dai *dai)
@@ -988,6 +1010,38 @@ static int ac97_hifi_prepare(struct snd_pcm_substream *substream,
 	else
 		reg = AC97_PCM_LR_ADC_RATE;
 
+	ac97_write(codec, reg, runtime->rate);
+	
+	ac97_write(codec,AC97_POWERDOWN,0x0);//26
+	ac97_write(codec,AC97_PHONE,0x0808);
+	ac97_write(codec,AC97_EXTENDED_MID,0xf803);//3c
+	ac97_write(codec,AC97_EXTENDED_MSTATUS,0xb990);
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		ac97_write(codec,AC97_MASTER,0x0404);//0404
+		ac97_write(codec,AC97_HEADPHONE,0x0606);	
+		ac97_write(codec,AC97_REC_GAIN,0x00aa);//12aa
+#ifdef CONFIG_FS210_DEBUG_WM9714_CODEC
+	printk("%s:SNDRV_PCM_STREAM_PLAYBACK \n",__func__);
+#endif
+	}
+	else
+	{
+		ac97_write(codec,AC97_CD,0x0f0f);//0x0f0f
+#ifdef CONFIG_SOUND_WM9713_INPUT_STREAM_MIC
+		ac97_write(codec,AC97_AD_TEST2,0x2);
+		ac97_write(codec,AC97_LINE,0x68);
+		ac97_write(codec,AC97_VIDEO,0xfe00);
+		/*for(i=0;i<0x80;i=i+2)
+		{
+			reg_1 = ac97_read(codec,i);
+			printk("%s:MIC IN %d ::: %d \n",__func__,i,reg_1);
+		}*/
+#else //Input Stream is LINE-IN 
+	printk("%s:LINE IN \n",__func__);
+		ac97_write(codec,AC97_VIDEO,0xd612);
+#endif
+	}
 	return ac97_write(codec, reg, runtime->rate);
 }
 
@@ -1027,6 +1081,7 @@ static int ac97_aux_prepare(struct snd_pcm_substream *substream,
 	 SNDRV_PCM_FORMAT_S24_LE)
 
 static struct snd_soc_dai_ops wm9713_dai_ops_hifi = {
+	.hw_params	= wm9713_hifi_hw_params,
 	.prepare	= ac97_hifi_prepare,
 	.set_clkdiv	= wm9713_set_dai_clkdiv,
 	.set_pll	= wm9713_set_dai_pll,

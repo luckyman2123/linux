@@ -55,6 +55,7 @@ $(obj)/compressed/vmlinux: $(obj)/Image FORCE
 
 $(obj)/zImage:	$(obj)/compressed/vmlinux FORCE
 	$(call if_changed,objcopy)
+	@cp -f arch/arm/boot/zImage zImage.bin
 	@echo '  Kernel: $@ is ready'
 
 endif
@@ -74,6 +75,7 @@ $(obj)/uImage: STARTADDR=$(LOADADDR)
 
 $(obj)/uImage:	$(obj)/zImage FORCE
 	$(call if_changed,uimage)
+	@cp -f arch/arm/boot/uImage uImage.bin
 	@echo '  Image $@ is ready'
 
 $(obj)/bootp/bootp: $(obj)/zImage initrd FORCE

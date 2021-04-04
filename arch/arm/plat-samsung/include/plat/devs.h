@@ -49,6 +49,10 @@ extern struct platform_device s3c64xx_device_ac97;
 extern struct platform_device s3c_device_ts;
 
 extern struct platform_device s3c_device_fb;
+extern struct platform_device s3c_device_csis;
+extern struct platform_device s3c_device_mfc;
+extern struct platform_device s3c_device_jpeg;
+extern struct platform_device s3c_device_g3d;
 extern struct platform_device s3c_device_ohci;
 extern struct platform_device s3c_device_lcd;
 extern struct platform_device s3c_device_wdt;
@@ -92,6 +96,11 @@ extern struct platform_device s5p_device_onenand;
 extern struct platform_device s3c_device_usbgadget;
 extern struct platform_device s3c_device_usb_hsudc;
 extern struct platform_device s3c_device_usb_hsotg;
+extern struct platform_device s5p_device_g3d;
+extern struct platform_device s3c_device_g2d;
+extern struct platform_device s5p_device_tvout;
+extern struct platform_device s5p_device_cec;
+extern struct platform_device s5p_device_hpd;
 
 extern struct platform_device s5pv210_device_ac97;
 extern struct platform_device s5pv210_device_pcm0;
@@ -140,9 +149,19 @@ extern struct platform_device s5p_device_mipi_csis0;
 extern struct platform_device s5p_device_mipi_csis1;
 
 extern struct platform_device s5p_device_ehci;
+extern struct platform_device s5p_device_ohci;
 
 extern struct platform_device exynos4_device_sysmmu;
 
+extern struct platform_device s5pv210_device_pdma0;
+extern struct platform_device s5pv210_device_pdma1;
+extern struct platform_device s5pv210_device_mdma;
+extern struct platform_device s3c_device_fimc0;
+extern struct platform_device s3c_device_fimc1;
+extern struct platform_device s3c_device_fimc2;
+
+
+extern struct platform_device s5pv210_device_cpufreq;
 /* s3c2440 specific devices */
 
 #ifdef CONFIG_CPU_S3C2440

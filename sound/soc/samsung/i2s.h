@@ -24,6 +24,11 @@
 
 #define SAMSUNG_I2S_RCLKSRC_0	0
 #define SAMSUNG_I2S_RCLKSRC_1	1
-#define SAMSUNG_I2S_CDCLK		2
+#define SAMSUNG_I2S_CDCLK	2
+#define SAMSUNG_I2S_OPCLK	3
 
+#define OPCLK_CDCLK_OUT     0
+#define OPCLK_CDCLK_IN      1
+#define OPCLK_BCLK_OUT      2
+#define OPCLK_BUSCLK          3
 #endif /* __SND_SOC_SAMSUNG_I2S_H */

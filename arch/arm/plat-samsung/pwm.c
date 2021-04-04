@@ -20,8 +20,10 @@
 #include <linux/io.h>
 #include <linux/pwm.h>
 
+#include <mach/irqs.h>
 #include <mach/map.h>
 
+#include <plat/devs.h>
 #include <plat/regs-timer.h>
 
 struct pwm_device {
@@ -44,6 +46,31 @@ struct pwm_device {
 #define pwm_dbg(_pwm, msg...) dev_dbg(&(_pwm)->pdev->dev, msg)
 
 static struct clk *clk_scaler[2];
+static DEFINE_SPINLOCK(pwm_spin_lock);
+
+/* Standard setup for a timer block. */
+
+#define TIMER_RESOURCE_SIZE (1)
+
+#define TIMER_RESOURCE(_tmr, _irq)			\
+	(struct resource [TIMER_RESOURCE_SIZE]) {	\
+		[0] = {					\
+			.start	= _irq,			\
+			.end	= _irq,			\
+			.flags	= IORESOURCE_IRQ	\
+		}					\
+	}
+
+#define DEFINE_S3C_TIMER(_tmr_no, _irq)			\
+	.name		= "s3c24xx-pwm",		\
+	.id		= _tmr_no,			\
+	.num_resources	= TIMER_RESOURCE_SIZE,		\
+	.resource	= TIMER_RESOURCE(_tmr_no, _irq),	\
+
+/* since we already have an static mapping for the timer, we do not
+ * bother setting any IO resource for the base.
+ */
+
 
 static inline int pwm_is_tdiv(struct pwm_device *pwm)
 {
@@ -185,6 +212,9 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	/* The TCMP and TCNT can be read without a lock, they're not
 	 * shared between the timers. */
 
+	clk_enable(pwm->clk);
+	clk_enable(pwm->clk_div);
+
 	tcmp = __raw_readl(S3C2410_TCMPB(pwm->pwm_id));
 	tcnt = __raw_readl(S3C2410_TCNTB(pwm->pwm_id));
 
@@ -241,6 +271,9 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	__raw_writel(tcon, S3C2410_TCON);
 
 	local_irq_restore(flags);
+
+	clk_disable(pwm->clk);
+	clk_disable(pwm->clk_div);
 
 	return 0;
 }

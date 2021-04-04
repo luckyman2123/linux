@@ -104,6 +104,25 @@ static void sdhci_dumpregs(struct sdhci_host *host)
  *                                                                           *
 \*****************************************************************************/
 
+
+static void sdhci_enable_clock_card(struct sdhci_host *host)
+{
+        u16 clk;
+
+        clk = readw(host->ioaddr + SDHCI_CLOCK_CONTROL);
+        clk |= SDHCI_CLOCK_CARD_EN;
+        writew(clk, host->ioaddr + SDHCI_CLOCK_CONTROL);
+}
+
+static void sdhci_disable_clock_card(struct sdhci_host *host)
+{
+        u16 clk;
+
+        clk = readw(host->ioaddr + SDHCI_CLOCK_CONTROL);
+        clk &= ~SDHCI_CLOCK_CARD_EN;
+        writew(clk, host->ioaddr + SDHCI_CLOCK_CONTROL);
+}
+
 static void sdhci_clear_set_irqs(struct sdhci_host *host, u32 clear, u32 set)
 {
 	u32 ier;
@@ -961,7 +980,8 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	mod_timer(&host->timer, jiffies + 10 * HZ);
 
 	host->cmd = cmd;
-
+	
+	sdhci_enable_clock_card(host);
 	sdhci_prepare_data(host, cmd);
 
 	sdhci_writel(host, cmd->arg, SDHCI_ARGUMENT);
@@ -1044,7 +1064,7 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	u16 clk = 0;
 	unsigned long timeout;
 
-	if (clock == host->clock)
+	if (clock && clock == host->clock)
 		return;
 
 	if (host->ops->set_clock) {
@@ -1863,9 +1883,6 @@ static void sdhci_tasklet_finish(unsigned long param)
 
 	del_timer(&host->timer);
 
-	if (host->version >= SDHCI_SPEC_300)
-		del_timer(&host->tuning_timer);
-
 	mrq = host->mrq;
 
 	/*
@@ -1893,6 +1910,8 @@ static void sdhci_tasklet_finish(unsigned long param)
 		sdhci_reset(host, SDHCI_RESET_CMD);
 		sdhci_reset(host, SDHCI_RESET_DATA);
 	}
+
+                sdhci_disable_clock_card(host);
 
 	host->mrq = NULL;
 	host->cmd = NULL;

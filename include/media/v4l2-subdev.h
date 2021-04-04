@@ -145,6 +145,7 @@ struct v4l2_subdev_io_pin_config {
 struct v4l2_subdev_core_ops {
 	int (*g_chip_ident)(struct v4l2_subdev *sd, struct v4l2_dbg_chip_ident *chip);
 	int (*log_status)(struct v4l2_subdev *sd);
+	int (*s_config)(struct v4l2_subdev *sd, int irq, void *platform_data);
 	int (*s_io_pin_config)(struct v4l2_subdev *sd, size_t n,
 				      struct v4l2_subdev_io_pin_config *pincfg);
 	int (*init)(struct v4l2_subdev *sd, u32 val);
@@ -187,6 +188,7 @@ struct v4l2_subdev_core_ops {
    s_config: sets tda9887 specific stuff, like port1, port2 and qss
  */
 struct v4l2_subdev_tuner_ops {
+	int (*s_mode)(struct v4l2_subdev *sd, enum v4l2_tuner_type);
 	int (*s_radio)(struct v4l2_subdev *sd);
 	int (*s_frequency)(struct v4l2_subdev *sd, struct v4l2_frequency *freq);
 	int (*g_frequency)(struct v4l2_subdev *sd, struct v4l2_frequency *freq);
@@ -267,6 +269,10 @@ struct v4l2_subdev_video_ops {
 	int (*querystd)(struct v4l2_subdev *sd, v4l2_std_id *std);
 	int (*g_input_status)(struct v4l2_subdev *sd, u32 *status);
 	int (*s_stream)(struct v4l2_subdev *sd, int enable);
+	int (*enum_fmt)(struct v4l2_subdev *sd, struct v4l2_fmtdesc *fmtdesc);
+	int (*g_fmt)(struct v4l2_subdev *sd, struct v4l2_format *fmt);
+	int (*try_fmt)(struct v4l2_subdev *sd, struct v4l2_format *fmt);
+	int (*s_fmt)(struct v4l2_subdev *sd, struct v4l2_format *fmt);
 	int (*cropcap)(struct v4l2_subdev *sd, struct v4l2_cropcap *cc);
 	int (*g_crop)(struct v4l2_subdev *sd, struct v4l2_crop *crop);
 	int (*s_crop)(struct v4l2_subdev *sd, struct v4l2_crop *crop);

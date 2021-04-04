@@ -22,7 +22,7 @@
 
 #include <plat/devs.h>
 #include <plat/ts.h>
-
+#if 0
 static struct resource s3c_ts_resource[] = {
 	[0] = {
 		.start = SAMSUNG_PA_ADC,
@@ -42,7 +42,8 @@ struct platform_device s3c_device_ts = {
 	.num_resources	= ARRAY_SIZE(s3c_ts_resource),
 	.resource	= s3c_ts_resource,
 };
-
+#endif
+#if defined(CONFIG_TOUCHSCREEN_S3C)
 void __init s3c24xx_ts_set_platdata(struct s3c2410_ts_mach_info *pd)
 {
 	struct s3c2410_ts_mach_info *npd;
@@ -58,3 +59,4 @@ void __init s3c24xx_ts_set_platdata(struct s3c2410_ts_mach_info *pd)
 
 	s3c_device_ts.dev.platform_data = npd;
 }
+#endif /* CONFIG_TOUCHSCREEN_S3C */

@@ -28,10 +28,10 @@ struct subsys_private {
 	struct kset subsys;
 	struct kset *devices_kset;
 
-	struct kset *drivers_kset;
-	struct klist klist_devices;
-	struct klist klist_drivers;
-	struct blocking_notifier_head bus_notifier;
+	struct kset *drivers_kset;		
+	struct klist klist_devices;		//设备klist
+	struct klist klist_drivers;		//驱动klist
+	struct blocking_notifier_head bus_notifier;		//通知类型
 	unsigned int drivers_autoprobe:1;
 	struct bus_type *bus;
 
@@ -70,8 +70,8 @@ struct device_private {
 	struct klist_node knode_parent;
 	struct klist_node knode_driver;
 	struct klist_node knode_bus;
-	void *driver_data;
-	struct device *device;
+	void *driver_data;						// 
+	struct device *device;					//指向包含自身的device结构体, Clark 19-09-13
 };
 #define to_device_private_parent(obj)	\
 	container_of(obj, struct device_private, knode_parent)

@@ -17,7 +17,7 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.		     */
 /* ------------------------------------------------------------------------- */
 
-/* With some changes from Kyösti Mälkki <kmalkki@cc.hut.fi>.
+/* With some changes from Ky枚sti M盲lkki <kmalkki@cc.hut.fi>.
    All SMBus-related things are written by Frodo Looijaard <frodol@dds.nl>
    SMBus 2.0 support by Mark Studebaker <mdsxyz123@yahoo.com> and
    Jean Delvare <khali@linux-fr.org>
@@ -65,6 +65,9 @@ static const struct i2c_device_id *i2c_match_id(const struct i2c_device_id *id,
 	return NULL;
 }
 
+i2c_driver
+
+//按id_table来匹配,如果实现了id_table 则按id匹配
 static int i2c_device_match(struct device *dev, struct device_driver *drv)
 {
 	struct i2c_client	*client = i2c_verify_client(dev);
@@ -80,7 +83,7 @@ static int i2c_device_match(struct device *dev, struct device_driver *drv)
 	driver = to_i2c_driver(drv);
 	/* match on an id table if there is one */
 	if (driver->id_table)
-		return i2c_match_id(driver->id_table, client) != NULL;
+		return i2c_match_id(driver->id_table, client) != NULL; //比较 id_table 的名字
 
 	return 0;
 }
@@ -314,7 +317,7 @@ static const struct dev_pm_ops i2c_device_pm_ops = {
 
 struct bus_type i2c_bus_type = {
 	.name		= "i2c",
-	.match		= i2c_device_match,
+	.match		= i2c_device_match,//匹配函数id_table
 	.probe		= i2c_device_probe,
 	.remove		= i2c_device_remove,
 	.shutdown	= i2c_device_shutdown,
@@ -845,7 +848,7 @@ static int i2c_register_adapter(struct i2c_adapter *adap)
 	dev_set_name(&adap->dev, "i2c-%d", adap->nr);
 	adap->dev.bus = &i2c_bus_type;
 	adap->dev.type = &i2c_adapter_type;
-	res = device_register(&adap->dev);
+	res = device_register(&adap->dev);//将adapter注册到底i2c_bus_type总线的适配器链表
 	if (res)
 		goto out_list;
 
@@ -865,6 +868,7 @@ static int i2c_register_adapter(struct i2c_adapter *adap)
 
 	/* Notify drivers */
 	mutex_lock(&core_lock);
+	//搜索板子信息,每搜索一个驱动都会调用__process_new_adapter
 	bus_for_each_drv(&i2c_bus_type, NULL, adap, __process_new_adapter);
 	mutex_unlock(&core_lock);
 
@@ -942,14 +946,15 @@ int i2c_add_numbered_adapter(struct i2c_adapter *adap)
 
 	if (adap->nr & ~MAX_ID_MASK)
 		return -EINVAL;
-
+	
 retry:
 	if (idr_pre_get(&i2c_adapter_idr, GFP_KERNEL) == 0)
 		return -ENOMEM;
 
 	mutex_lock(&core_lock);
 	/* "above" here means "above or equal to", sigh;
-	 * we need the "equal to" result to force the result
+	 * we need the "equal to" result to force the result   利用idr为适配器分配id
+	 动态分配id
 	 */
 	status = idr_get_new_above(&i2c_adapter_idr, adap, adap->nr, &id);
 	if (status == 0 && id != adap->nr) {
@@ -1131,12 +1136,13 @@ int i2c_register_driver(struct module *owner, struct i2c_driver *driver)
 
 	/* add the driver to the list of i2c drivers in the driver core */
 	driver->driver.owner = owner;
-	driver->driver.bus = &i2c_bus_type;
+	driver->driver.bus = &i2c_bus_type;	//i2c总线
 
 	/* When registration returns, the driver core
 	 * will have called probe() for all matching-but-unbound devices.
 	 */
-	res = driver_register(&driver->driver);
+	res = driver_register(&driver->driver);//挂到设备驱动链表
+	//成功则调用 i2c_driver->probe函数
 	if (res)
 		return res;
 
@@ -1242,7 +1248,7 @@ static int __init i2c_init(void)
 {
 	int retval;
 
-	retval = bus_register(&i2c_bus_type);
+	retval = bus_register(&i2c_bus_type);//注册i2c总线
 	if (retval)
 		return retval;
 #ifdef CONFIG_I2C_COMPAT

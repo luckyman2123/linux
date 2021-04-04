@@ -67,7 +67,7 @@
  * See linux/arch/arm/tools/mach-types for the complete list of machine
  * numbers for r1.
  *
- * We're trying to keep crap to a minimum; DO NOT add any machine specific
+ * We're trying to keep crap ( 质量差的东西) to a minimum; DO NOT add any machine specific
  * crap here - that's what the boot loader (or in extreme, well justified
  * circumstances, zImage) is for.
  */
@@ -75,10 +75,16 @@
 ENTRY(stext)
 	setmode	PSR_F_BIT | PSR_I_BIT | SVC_MODE, r9 @ ensure svc mode
 						@ and irqs disabled
-	mrc	p15, 0, r9, c0, c0		@ get processor id
-	bl	__lookup_processor_type		@ r5=procinfo r9=cpuid
+
+	/* 获取 cpu id */
+	mrc	p15, 0, r9, c0, c0		@ get processor id  
+   /*查找内核是否支持r9这个cpuID，若不支持r5=0，支持r5=处理器ID*/
+	bl	__lookup_processor_type		@ r5=procinfo r9=cpuid 
+	
 	movs	r10, r5				@ invalid processor (r5=0)?
  THUMB( it	eq )		@ force fixup-able long branch encoding
+
+	/*comment by clark :: 不支持则跳转到__error_p,死循环*/
 	beq	__error_p			@ yes, error 'p'
 
 #ifndef CONFIG_XIP_KERNEL
@@ -101,6 +107,7 @@ ENTRY(stext)
 #ifdef CONFIG_ARM_PATCH_PHYS_VIRT
 	bl	__fixup_pv_table
 #endif
+	/* comment by clark :: 跳转到__create_page_tables 创建页表，为后面的MMU做准备*/
 	bl	__create_page_tables
 
 	/*

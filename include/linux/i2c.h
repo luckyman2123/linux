@@ -20,7 +20,7 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.		     */
 /* ------------------------------------------------------------------------- */
 
-/* With some changes from Kyösti Mälkki <kmalkki@cc.hut.fi> and
+/* With some changes from Ky枚sti M盲lkki <kmalkki@cc.hut.fi> and
    Frodo Looijaard <frodol@dds.nl> */
 
 #ifndef _LINUX_I2C_H
@@ -139,6 +139,8 @@ extern s32 i2c_smbus_write_i2c_block_data(const struct i2c_client *client,
  * else with it. In particular, calling dev_dbg and friends on it is
  * not allowed.
  */
+
+//表示一个i2c设备驱动
 struct i2c_driver {
 	unsigned int class;
 
@@ -146,10 +148,12 @@ struct i2c_driver {
 	 * removed. You should avoid using this, it will be removed in a
 	 * near future.
 	 */
+	//匹配函数
 	int (*attach_adapter)(struct i2c_adapter *) __deprecated;
 	int (*detach_adapter)(struct i2c_adapter *) __deprecated;
 
 	/* Standard driver model interfaces */
+	//匹配i2c 设备
 	int (*probe)(struct i2c_client *, const struct i2c_device_id *);
 	int (*remove)(struct i2c_client *);
 
@@ -170,8 +174,8 @@ struct i2c_driver {
 	 */
 	int (*command)(struct i2c_client *client, unsigned int cmd, void *arg);
 
-	struct device_driver driver;
-	const struct i2c_device_id *id_table;
+	struct device_driver driver;//设备驱动对象
+	const struct i2c_device_id *id_table;//记录了此i2c驱动能服务哪些设备
 
 	/* Device detection callback for automatic device creation */
 	int (*detect)(struct i2c_client *, struct i2c_board_info *);
@@ -198,16 +202,17 @@ struct i2c_driver {
  * i2c bus. The behaviour exposed to Linux is defined by the driver
  * managing the device.
  */
+ //表示一个i2c设备
 struct i2c_client {
 	unsigned short flags;		/* div., see below		*/
-	unsigned short addr;		/* chip address - NOTE: 7bit	*/
+	unsigned short addr;		/* chip address - NOTE: 7bit	器件地址*/
 					/* addresses are stored in the	*/
 					/* _LOWER_ 7 bits		*/
-	char name[I2C_NAME_SIZE];
-	struct i2c_adapter *adapter;	/* the adapter we sit on	*/
-	struct i2c_driver *driver;	/* and our access routines	*/
-	struct device dev;		/* the device structure		*/
-	int irq;			/* irq issued by device		*/
+	char name[I2C_NAME_SIZE]; //设备名字
+	struct i2c_adapter *adapter;	/* the adapter we sit on 所属适配器	*/
+	struct i2c_driver *driver;	/* and our access routines	所属驱动*/
+	struct device dev;		/* the device structure	设备对象	*/
+	int irq;			/* irq issued by device	设备外部中断	*/
 	struct list_head detected;
 };
 #define to_i2c_client(d) container_of(d, struct i2c_client, dev)
@@ -251,10 +256,11 @@ static inline void i2c_set_clientdata(struct i2c_client *dev, void *data)
  * bus numbers identify adapters that aren't yet available.  For add-on boards,
  * i2c_new_device() does this dynamically with the adapter already known.
  */
+ //i2c 的板级信息
 struct i2c_board_info {
-	char		type[I2C_NAME_SIZE];
+	char		type[I2C_NAME_SIZE];  //设备名字24c02
 	unsigned short	flags;
-	unsigned short	addr;
+	unsigned short	addr; //设备地址 0x50
 	void		*platform_data;
 	struct dev_archdata	*archdata;
 	struct device_node *of_node;
@@ -342,7 +348,7 @@ struct i2c_algorithm {
 	int (*smbus_xfer) (struct i2c_adapter *adap, u16 addr,
 			   unsigned short flags, char read_write,
 			   u8 command, int size, union i2c_smbus_data *data);
-
+	//SMBus协议类似i2c协不用
 	/* To determine what the adapter supports */
 	u32 (*functionality) (struct i2c_adapter *);
 };
@@ -351,10 +357,12 @@ struct i2c_algorithm {
  * i2c_adapter is the structure used to identify a physical i2c bus along
  * with the access algorithms necessary to access it.
  */
+
+//表示一个i2c适配器
 struct i2c_adapter {
 	struct module *owner;
 	unsigned int class;		  /* classes to allow probing for */
-	const struct i2c_algorithm *algo; /* the algorithm to access the bus */
+	const struct i2c_algorithm *algo; /* the algorithm to access the bus  访问总线方法*/
 	void *algo_data;
 
 	/* data fields that are valid for all devices	*/
@@ -362,10 +370,10 @@ struct i2c_adapter {
 
 	int timeout;			/* in jiffies */
 	int retries;
-	struct device dev;		/* the adapter device */
+	struct device dev;		/* the adapter device 设备对象*/
 
 	int nr;
-	char name[48];
+	char name[48];//适配器名字
 	struct completion dev_released;
 
 	struct mutex userspace_clients_lock;
@@ -507,9 +515,10 @@ static inline int i2c_adapter_id(struct i2c_adapter *adap)
  * adapters which are known to support the specific mangling options they
  * need (one or more of IGNORE_NAK, NO_RD_ACK, NOSTART, and REV_DIR_ADDR).
  */
+ //表示一个i2c数据包
 struct i2c_msg {
-	__u16 addr;	/* slave address			*/
-	__u16 flags;
+	__u16 addr;	/* slave address	从机地址		*/
+	__u16 flags; // 0:写包 1:读包
 #define I2C_M_TEN		0x0010	/* this is a ten bit chip address */
 #define I2C_M_RD		0x0001	/* read data, from slave to master */
 #define I2C_M_NOSTART		0x4000	/* if I2C_FUNC_PROTOCOL_MANGLING */
@@ -517,8 +526,8 @@ struct i2c_msg {
 #define I2C_M_IGNORE_NAK	0x1000	/* if I2C_FUNC_PROTOCOL_MANGLING */
 #define I2C_M_NO_RD_ACK		0x0800	/* if I2C_FUNC_PROTOCOL_MANGLING */
 #define I2C_M_RECV_LEN		0x0400	/* length will be first received byte */
-	__u16 len;		/* msg length				*/
-	__u8 *buf;		/* pointer to msg data			*/
+	__u16 len;		/* msg length	 数据包长度			*/
+	__u8 *buf;		/* pointer to msg data	实际的数据指针		*/
 };
 
 /* To determine what functionality is present */

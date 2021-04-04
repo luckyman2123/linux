@@ -89,6 +89,8 @@ void s5pv210_setup_sdhci2_cfg_gpio(struct platform_device *dev, int width)
 
 void s5pv210_setup_sdhci3_cfg_gpio(struct platform_device *dev, int width)
 {
+	int i;
+	
 	struct s3c_sdhci_platdata *pdata = dev->dev.platform_data;
 
 	/* Set all the necessary GPG3[0:1] pins to special-function 2 */

@@ -528,7 +528,6 @@ static void s3c64xx_spi_dma_txcb(struct s3c2410_dma_chan *chan, void *buf_id,
 static int s3c64xx_spi_map_mssg(struct s3c64xx_spi_driver_data *sdd,
 						struct spi_message *msg)
 {
-	struct s3c64xx_spi_info *sci = sdd->cntrlr_info;
 	struct device *dev = &sdd->pdev->dev;
 	struct spi_transfer *xfer;
 
@@ -543,10 +542,6 @@ static int s3c64xx_spi_map_mssg(struct s3c64xx_spi_driver_data *sdd,
 
 	/* Map until end or first fail */
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
-
-		if (xfer->len <= ((sci->fifo_lvl_mask >> 1) + 1))
-			continue;
-
 		if (xfer->tx_buf != NULL) {
 			xfer->tx_dma = dma_map_single(dev,
 					(void *)xfer->tx_buf, xfer->len,
@@ -660,7 +655,7 @@ static void handle_msg(struct s3c64xx_spi_driver_data *sdd,
 		}
 
 		/* Polling method for xfers not bigger than FIFO capacity */
-		if (xfer->len <= ((sci->fifo_lvl_mask >> 1) + 1))
+		if (xfer->len <= ((sci->fifo_lvl_mask >> 3) + 1))
 			use_dma = 0;
 		else
 			use_dma = 1;

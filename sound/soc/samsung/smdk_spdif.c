@@ -178,7 +178,7 @@ static int __init smdk_init(void)
 	if (ret)
 		goto err1;
 
-	smdk_snd_spdif_device = platform_device_alloc("soc-audio", -1);
+	smdk_snd_spdif_device = platform_device_alloc("soc-audio", 0);
 	if (!smdk_snd_spdif_device) {
 		ret = -ENOMEM;
 		goto err2;

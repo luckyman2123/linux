@@ -175,6 +175,8 @@ EXPORT_SYMBOL_GPL(get_driver);
  * put_driver - decrement driver's refcount.
  * @drv: driver.
  */
+
+// 删除driver的引用,By Clark 19-09-13
 void put_driver(struct device_driver *drv)
 {
 	kobject_put(&drv->p->kobj);
@@ -279,13 +281,14 @@ EXPORT_SYMBOL_GPL(driver_unregister);
  */
 struct device_driver *driver_find(const char *name, struct bus_type *bus)
 {
+	//挂载在bus上的驱动kset
 	struct kobject *k = kset_find_obj(bus->p->drivers_kset, name);
-	struct driver_private *priv;
+	struct driver_private *priv;		
 
 	if (k) {
 		priv = to_driver(k);
 		return priv->driver;
 	}
-	return NULL;
+	return NULL;		//第一次加入设备因之前没注册,在kset中找不到相应的kobject, 所以返回NULL.
 }
 EXPORT_SYMBOL_GPL(driver_find);

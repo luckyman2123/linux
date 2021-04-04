@@ -30,6 +30,8 @@
 #include <plat/s5p-clock.h>
 #include <plat/clock-clksrc.h>
 #include <plat/s5pv210.h>
+#include <plat/devs.h>
+#include <mach/regs-audss.h>
 
 static unsigned long xtal;
 
@@ -175,6 +177,10 @@ static int s5pv210_clk_ip3_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKGATE_IP3, clk, enable);
 }
 
+static int s5pv210_clk_ip5_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_IP5, clk, enable);
+}
 static int s5pv210_clk_mask0_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLK_SRC_MASK0, clk, enable);
@@ -183,6 +189,11 @@ static int s5pv210_clk_mask0_ctrl(struct clk *clk, int enable)
 static int s5pv210_clk_mask1_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLK_SRC_MASK1, clk, enable);
+}
+
+static int s5pv210_clk_audss_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_AUDSS, clk, enable);
 }
 
 static struct clk clk_sclk_hdmi27m = {
@@ -204,6 +215,21 @@ static struct clk clk_sclk_usbphy0 = {
 static struct clk clk_sclk_usbphy1 = {
 	.name		= "sclk_usbphy1",
 	.id		= -1,
+};
+
+static struct clk clk_i2scdclk0 = {
+	.name		= "i2scdclk",
+	.id		= 0,
+};
+
+static struct clk clk_i2scdclk1 = {
+	.name		= "i2scdclk",
+	.id		= 1,
+};
+
+static struct clk clk_i2scdclk2 = {
+	.name		= "i2scdclk",
+	.id		= 2,
 };
 
 static struct clk clk_pcmcdclk0 = {
@@ -311,18 +337,6 @@ static struct clk_ops clk_fout_apll_ops = {
 
 static struct clk init_clocks_off[] = {
 	{
-		.name		= "pdma",
-		.id		= 0,
-		.parent		= &clk_hclk_psys.clk,
-		.enable		= s5pv210_clk_ip0_ctrl,
-		.ctrlbit	= (1 << 3),
-	}, {
-		.name		= "pdma",
-		.id		= 1,
-		.parent		= &clk_hclk_psys.clk,
-		.enable		= s5pv210_clk_ip0_ctrl,
-		.ctrlbit	= (1 << 4),
-	}, {
 		.name		= "rot",
 		.id		= -1,
 		.parent		= &clk_hclk_dsys.clk,
@@ -347,24 +361,66 @@ static struct clk init_clocks_off[] = {
 		.enable		= s5pv210_clk_ip0_ctrl,
 		.ctrlbit	= (1 << 26),
 	}, {
+		.name		= "jpeg",
+		.id		= -1,
+		.parent		= &clk_hclk_dsys.clk,
+		.enable		= s5pv210_clk_ip5_ctrl,
+		.ctrlbit	= S5P_CLKGATE_IP5_JPEG,
+	}, {
+                .name           = "g2d",
+                .id             = -1,
+                .parent         = &clk_hclk_dsys.clk,
+                .enable         = s5pv210_clk_ip0_ctrl,
+                .ctrlbit        = (1 << 12),
+        },{
+                .name           = "i2c-hdmiphy",
+                .id             = -1,
+                .parent         = &clk_pclk_psys.clk,
+                .enable         = s5pv210_clk_ip3_ctrl,
+                .ctrlbit        = (1 << 11),
+        }, {
+                .name           = "hdmi",
+                .id             = -1,
+                .parent         = &clk_hclk_dsys.clk,
+                .enable         = s5pv210_clk_ip1_ctrl,
+                .ctrlbit        = (1 << 11),
+        }, {
+                .name           = "tvenc",
+                .id             = -1,
+                .parent         = &clk_hclk_dsys.clk,
+                .enable         = s5pv210_clk_ip1_ctrl,
+                .ctrlbit        = (1 << 10),
+        }, {
+                .name           = "mixer",
+                .id             = -1,
+                .parent         = &clk_hclk_dsys.clk,
+                .enable         = s5pv210_clk_ip1_ctrl,
+                .ctrlbit        = (1 << 9),
+        }, {
+                .name           = "vp",
+                .id             = -1,
+                .parent         = &clk_hclk_dsys.clk,
+                .enable         = s5pv210_clk_ip1_ctrl,
+                .ctrlbit        = (1 << 8),
+        }, {
 		.name		= "otg",
 		.id		= -1,
 		.parent		= &clk_hclk_psys.clk,
 		.enable		= s5pv210_clk_ip1_ctrl,
 		.ctrlbit	= (1<<16),
 	}, {
-		.name		= "usb-host",
+		.name		= "usbhost",
 		.id		= -1,
 		.parent		= &clk_hclk_psys.clk,
 		.enable		= s5pv210_clk_ip1_ctrl,
 		.ctrlbit	= (1<<17),
-	}, {
-		.name		= "lcd",
+		},{
+		.name		= "nandxl",
 		.id		= -1,
-		.parent		= &clk_hclk_dsys.clk,
+		.parent		= &clk_hclk_psys.clk,
 		.enable		= s5pv210_clk_ip1_ctrl,
-		.ctrlbit	= (1<<0),
-	}, {
+		.ctrlbit	= (1 << 24),
+		},  {
 		.name		= "cfcon",
 		.id		= 0,
 		.parent		= &clk_hclk_psys.clk,
@@ -449,12 +505,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= s5pv210_clk_ip3_ctrl,
 		.ctrlbit	= (1<<14),
 	}, {
-		.name		= "timers",
-		.id		= -1,
-		.parent		= &clk_pclk_psys.clk,
-		.enable		= s5pv210_clk_ip3_ctrl,
-		.ctrlbit	= (1<<23),
-	}, {
 		.name		= "adc",
 		.id		= -1,
 		.parent		= &clk_pclk_psys.clk,
@@ -467,23 +517,53 @@ static struct clk init_clocks_off[] = {
 		.enable		= s5pv210_clk_ip3_ctrl,
 		.ctrlbit	= (1<<21),
 	}, {
-		.name		= "iis",
+		.name		= "i2s_v50",
 		.id		= 0,
 		.parent		= &clk_p,
 		.enable		= s5pv210_clk_ip3_ctrl,
-		.ctrlbit	= (1<<4),
-	}, {
-		.name		= "iis",
+		.ctrlbit	= S5P_CLKGATE_IP3_I2S0,
+	},{
+		.name		= "i2s_v50",
+		.id		= 1, 
+		.parent		= &clk_p,
+		.enable		= s5pv210_clk_ip3_ctrl,
+		.ctrlbit	= S5P_CLKGATE_IP3_I2S1 | S5P_CLKGATE_IP3_PCM1,
+	},{
+		.name		= "i2s",
 		.id		= 1,
 		.parent		= &clk_p,
 		.enable		= s5pv210_clk_ip3_ctrl,
-		.ctrlbit	= (1 << 5),
+		.ctrlbit	= S5P_CLKGATE_IP3_I2S1,
 	}, {
-		.name		= "iis",
+		.name		= "i2s",
 		.id		= 2,
 		.parent		= &clk_p,
 		.enable		= s5pv210_clk_ip3_ctrl,
-		.ctrlbit	= (1 << 6),
+		.ctrlbit	= S5P_CLKGATE_IP3_I2S2,
+	}, {
+		.name		= "pcm",
+		.id		= 0,
+		.parent		= &clk_p,
+		.enable		= s5pv210_clk_ip3_ctrl,
+		.ctrlbit	= S5P_CLKGATE_IP3_PCM0,
+	}, {
+		.name		= "pcm",
+		.id		= 1,
+		.parent		= &clk_p,
+		.enable		= s5pv210_clk_ip3_ctrl,
+		.ctrlbit	= S5P_CLKGATE_IP3_PCM1,
+	}, {
+		.name		= "pcm",
+		.id		= 2,
+		.parent		= &clk_p,
+		.enable		= s5pv210_clk_ip3_ctrl,
+		.ctrlbit	= S5P_CLKGATE_IP3_PCM2,
+	}, {
+		.name		= "ac97",
+		.id		= -1,
+		.parent		= &clk_p,
+		.enable		= s5pv210_clk_ip3_ctrl,
+		.ctrlbit	= (1 << 1),
 	}, {
 		.name		= "spdif",
 		.id		= -1,
@@ -491,6 +571,40 @@ static struct clk init_clocks_off[] = {
 		.enable		= s5pv210_clk_ip3_ctrl,
 		.ctrlbit	= (1 << 0),
 	},
+};
+
+
+static struct clk init_dmaclocks[] = {
+        {
+                .name           = "pdma",
+                .id             = 0,
+                .parent         = &clk_hclk_dsys.clk,
+                .enable         = s5pv210_clk_ip0_ctrl,
+                .ctrlbit        = (1<<2),
+                .dev            = &s5pv210_device_mdma.dev,
+        }, {
+                .name           = "pdma",
+                .id             = 1,
+                .parent         = &clk_hclk_psys.clk,
+                .enable         = s5pv210_clk_ip0_ctrl,
+                .ctrlbit        = (1<<3),
+                .dev            = &s5pv210_device_pdma0.dev,
+        }, {
+                .name           = "pdma",
+                .id             = 2,
+                .parent         = &init_dmaclocks[1],
+                .enable         = s5pv210_clk_ip0_ctrl,
+                .ctrlbit        = (1<<4),
+                .dev            = &s5pv210_device_pdma1.dev,
+        },
+};
+
+static  int s5pc11x_clk_out_set_rate(struct clk *clk, unsigned long rate);
+static int s5pc11x_clk_out_set_parent(struct clk *clk, struct clk *parent);
+
+static struct clk_ops s5pc11x_clkout_ops = {
+	.set_parent = s5pc11x_clk_out_set_parent,
+	.set_rate = s5pc11x_clk_out_set_rate,
 };
 
 static struct clk init_clocks[] = {
@@ -520,17 +634,42 @@ static struct clk init_clocks[] = {
 		.enable		= s5pv210_clk_ip3_ctrl,
 		.ctrlbit	= (1 << 19),
 	}, {
+		.name		= "i2s_v50",
+		.id		= 1, 
+		.parent		= &clk_p,
+		.enable		= s5pv210_clk_ip3_ctrl,
+		.ctrlbit	= S5P_CLKGATE_IP3_I2S1,
+	}, {
 		.name		= "uart",
 		.id		= 3,
 		.parent		= &clk_pclk_psys.clk,
 		.enable		= s5pv210_clk_ip3_ctrl,
 		.ctrlbit	= (1 << 20),
 	}, {
+                .name           = "mfc",
+                .id             = 4,
+                .parent         = &clk_hclk_msys.clk,
+                .enable         = s5pv210_clk_ip0_ctrl,
+                .ctrlbit        = (1<<16),
+	}, {
+		.name           = "timers",
+                .id             = -1,
+                .parent         = &clk_pclk_psys.clk,
+                .enable         = s5pv210_clk_ip3_ctrl,
+                .ctrlbit        = (1<<23),
+        }, {
 		.name		= "sromc",
 		.id		= -1,
 		.parent		= &clk_hclk_psys.clk,
 		.enable		= s5pv210_clk_ip1_ctrl,
 		.ctrlbit	= (1 << 26),
+	}, {
+		.name		= "clk_out",
+		.id		= -1,
+		.ops		= &s5pc11x_clkout_ops,
+	}, {
+		.name		= "apb_pclk",
+		.id		= -1,
 	},
 };
 
@@ -627,6 +766,54 @@ static struct clksrc_sources clkset_sclk_mixer = {
 	.nr_sources	= ARRAY_SIZE(clkset_sclk_mixer_list),
 };
 
+static int s5pc11x_clk_out_set_rate(struct clk *clk, unsigned long rate)
+{
+	u32 val = 0, div = 0, rate_div = 1;
+	int err = -EINVAL;
+
+	if (rate && clk->parent) {
+		if (clk->parent == &clk_fout_apll)
+			rate_div = 4;
+		if (clk->parent == &clk_fout_mpll)
+			rate_div = 2;
+
+		div = clk_get_rate(clk->parent) / rate / rate_div;
+		val = __raw_readl(S5P_CLK_OUT);
+		val &= (~(0xF << 20));
+		val |= (div - 1) << 20;
+		__raw_writel(val, S5P_CLK_OUT);
+		err = 0;
+	}
+	return err;
+}
+
+static int s5pc11x_clk_out_set_parent(struct clk *clk, struct clk *parent)
+{
+	u32 val = 0;
+	int err = 0;
+	clk->parent = parent;
+	val = __raw_readl(S5P_CLK_OUT);
+
+	if (parent == &clk_fout_apll) {
+		val = val & (~(0x1F << 12));
+		val |= (0x0 << 12);
+	} else if (parent == &clk_fout_mpll) {
+		val = val & (~(0x1F << 12));
+		val |= (0x1 << 12);
+	} else if (parent == &clk_fout_epll) {
+		val = val & (~(0x1F << 12));
+		val |= (0x2 << 12);
+	} else if (parent == &clk_sclk_vpll.clk) {
+		val = val & (~(0x1F << 12));
+		val |= (0x3 << 12);
+	} else {
+		err = -EINVAL;
+	}
+
+	__raw_writel(val, S5P_CLK_OUT);
+	return err;
+}
+
 static struct clk *clkset_sclk_audio0_list[] = {
 	[0] = &clk_ext_xtal_mux,
 	[1] = &clk_pcmcdclk0,
@@ -654,6 +841,71 @@ static struct clksrc_clk clk_sclk_audio0 = {
 	.sources = &clkset_sclk_audio0,
 	.reg_src = { .reg = S5P_CLK_SRC6, .shift = 0, .size = 4 },
 	.reg_div = { .reg = S5P_CLK_DIV6, .shift = 0, .size = 4 },
+};
+
+static struct clk *clkset_mout_audss_list[] = {
+	&clk_ext_xtal_mux,
+	&clk_fout_epll,
+};
+
+static struct clksrc_sources clkset_mout_audss = {
+	.sources	= clkset_mout_audss_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_audss_list),
+};
+
+static struct clksrc_clk clk_mout_audss = {
+	.clk		= {
+		.name		= "mout_audss",
+		.id		= -1,
+	},
+	.sources	= &clkset_mout_audss,
+	.reg_src	= { .reg = S5P_CLKSRC_AUDSS, .shift = 0, .size = 1 },
+};
+
+static struct clk *clkset_mout_i2s_a_list[] = {
+	&clk_mout_audss.clk,
+	&clk_pcmcdclk0,
+	&clk_sclk_audio0.clk,
+};
+
+static struct clksrc_sources clkset_mout_i2s_a = {
+	.sources	= clkset_mout_i2s_a_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_i2s_a_list),
+};
+
+static struct clksrc_clk clk_mout_i2s_b = {
+	.clk		= {
+		.name		= "audio-bus",
+		.id		= 1/*0*/,
+		.enable		= s5pv210_clk_audss_ctrl,
+		.ctrlbit	= (1 << 6),
+	},
+	.sources	= &clkset_mout_i2s_a,
+	.reg_src	= { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
+	.reg_div	= { .reg = S5P_CLKDIV_AUDSS, .shift = 4, .size = 4 },
+};
+
+static struct clksrc_clk clk_mout_i2s_a = {
+	.clk		= {
+		.name		= "audio-bus",
+		.id		= 0,
+		.enable		= s5pv210_clk_audss_ctrl,
+		.ctrlbit	= (1 << 6),
+	},
+	.sources	= &clkset_mout_i2s_a,
+	.reg_src	= { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
+	.reg_div	= { .reg = S5P_CLKDIV_AUDSS, .shift = 4, .size = 4 },
+};
+
+static struct clksrc_clk clk_dout_audio_bus_clk_i2s = {
+	.clk		= {
+		.name		= "dout_audio_bus_clk_i2s",
+		.id		= -1,
+		.parent		= &clk_mout_audss.clk,
+		.enable		= s5pv210_clk_audss_ctrl,
+		.ctrlbit	= (1 << 5),
+	},
+	.reg_div	= { .reg = S5P_CLKDIV_AUDSS, .shift = 0, .size = 4 },
 };
 
 static struct clk *clkset_sclk_audio1_list[] = {
@@ -887,8 +1139,8 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLK_DIV3, .shift = 20, .size = 4 },
 	}, {
 		.clk		= {
-			.name		= "sclk_cam",
-			.id		= 0,
+			.name		= "sclk_cam0",
+			.id		= -1,
 			.enable		= s5pv210_clk_mask0_ctrl,
 			.ctrlbit	= (1 << 3),
 		},
@@ -897,8 +1149,8 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLK_DIV1, .shift = 12, .size = 4 },
 	}, {
 		.clk		= {
-			.name		= "sclk_cam",
-			.id		= 1,
+			.name		= "sclk_cam1",
+			.id		= -1,
 			.enable		= s5pv210_clk_mask0_ctrl,
 			.ctrlbit	= (1 << 4),
 		},
@@ -1038,6 +1290,18 @@ static struct clksrc_clk clksrcs[] = {
 	},
 };
 
+/* MOUT CSIS */
+static struct clksrc_clk clk_mout_csis = {
+	.clk		= {
+		.name		= "mout_csis",
+		.id		= -1,
+		.enable		= s5pv210_clk_mask0_ctrl,
+		.ctrlbit	= (1 << 6),
+	},
+	.sources	= &clkset_group1,
+	.reg_src	= { .reg = S5P_CLK_SRC1, .shift = 24, .size = 4 },
+};
+
 /* Clock initialisation code */
 static struct clksrc_clk *sysclks[] = {
 	&clk_mout_apll,
@@ -1058,10 +1322,15 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_sclk_hdmi,
 	&clk_mout_dmc0,
 	&clk_sclk_dmc0,
+	&clk_mout_csis,
 	&clk_sclk_audio0,
 	&clk_sclk_audio1,
 	&clk_sclk_audio2,
 	&clk_sclk_spdif,
+	&clk_mout_audss,
+	&clk_mout_i2s_a,
+	&clk_mout_i2s_b,
+	&clk_dout_audio_bus_clk_i2s,
 };
 
 static u32 epll_div[][6] = {
@@ -1095,8 +1364,8 @@ static int s5pv210_epll_set_rate(struct clk *clk, unsigned long rate)
 	unsigned int i;
 
 	/* Return if nothing changed */
-	if (clk->rate == rate)
-		return 0;
+//	if (clk->rate == rate)
+//		return 0;
 
 	epll_con = __raw_readl(S5P_EPLL_CON);
 	epll_con_k = __raw_readl(S5P_EPLL_CON1);
@@ -1140,6 +1409,54 @@ static struct clk_ops s5pv210_epll_ops = {
 	.get_rate = s5p_epll_get_rate,
 };
 
+static int s5pv210_vpll_enable(struct clk *clk, int enable)
+{
+        unsigned int ctrlbit = clk->ctrlbit;
+        unsigned int vpll_con = __raw_readl(S5P_VPLL_CON) & ~ctrlbit;
+
+        if (enable)
+                __raw_writel(vpll_con | ctrlbit, S5P_VPLL_CON);
+        else
+                __raw_writel(vpll_con, S5P_VPLL_CON);
+
+        return 0;
+}
+
+static unsigned long s5pv210_vpll_get_rate(struct clk *clk)
+{
+        return clk->rate;
+}
+
+static int s5pv210_vpll_set_rate(struct clk *clk, unsigned long rate)
+{
+        unsigned int vpll_con;
+
+        switch (rate) {
+        case 54000000:
+                vpll_con = PDIV(6) | MDIV(108) | SDIV(3);
+                break;
+        case 27000000:
+                vpll_con = PDIV(6) | MDIV(108) | SDIV(4);
+                break;
+        default:
+                goto err_on_invalid_rate;
+        }
+
+        __raw_writel(vpll_con, S5P_VPLL_CON);
+
+        clk->rate = rate;
+
+        return 0;
+
+err_on_invalid_rate:
+        return -EINVAL;
+}
+
+static struct clk_ops s5pv210_vpll_ops = {
+        .get_rate = s5pv210_vpll_get_rate,
+        .set_rate = s5pv210_vpll_set_rate,
+};
+
 void __init_or_cpufreq s5pv210_setup_clocks(void)
 {
 	struct clk *xtal_clk;
@@ -1161,6 +1478,9 @@ void __init_or_cpufreq s5pv210_setup_clocks(void)
 	/* Set functions for clk_fout_epll */
 	clk_fout_epll.enable = s5p_epll_enable;
 	clk_fout_epll.ops = &s5pv210_epll_ops;
+
+	clk_fout_vpll.enable = s5pv210_vpll_enable;
+	clk_fout_vpll.ops = &s5pv210_vpll_ops;
 
 	printk(KERN_DEBUG "%s: registering clocks\n", __func__);
 
@@ -1219,6 +1539,9 @@ static struct clk *clks[] __initdata = {
 	&clk_sclk_hdmiphy,
 	&clk_sclk_usbphy0,
 	&clk_sclk_usbphy1,
+	&clk_i2scdclk0,
+	&clk_i2scdclk1,
+	&clk_i2scdclk2,
 	&clk_pcmcdclk0,
 	&clk_pcmcdclk1,
 	&clk_pcmcdclk2,
@@ -1238,6 +1561,10 @@ void __init s5pv210_register_clocks(void)
 
 	s3c_register_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
 	s3c_disable_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
+
+	/* Register DMA Clock */
+        s3c_register_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks)); 
+        s3c_disable_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks));
 
 	s3c_pwmclk_init();
 }

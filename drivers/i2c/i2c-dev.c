@@ -62,7 +62,7 @@ static struct i2c_dev *i2c_dev_get_by_minor(unsigned index)
 	struct i2c_dev *i2c_dev;
 
 	spin_lock(&i2c_dev_list_lock);
-	list_for_each_entry(i2c_dev, &i2c_dev_list, list) {
+	list_for_each_entry(i2c_dev, &i2c_dev_list, list) {//搜索链表获得适配器号
 		if (i2c_dev->adap->nr == index)
 			goto found;
 	}
@@ -88,7 +88,7 @@ static struct i2c_dev *get_free_i2c_dev(struct i2c_adapter *adap)
 	i2c_dev->adap = adap;
 
 	spin_lock(&i2c_dev_list_lock);
-	list_add_tail(&i2c_dev->list, &i2c_dev_list);
+	list_add_tail(&i2c_dev->list, &i2c_dev_list);		//将i2c dev加入全局链表
 	spin_unlock(&i2c_dev_list_lock);
 	return i2c_dev;
 }
@@ -464,16 +464,19 @@ static long i2cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static int i2cdev_open(struct inode *inode, struct file *file)
 {
-	unsigned int minor = iminor(inode);
+	unsigned int minor = iminor(inode);//获得次设备号
 	struct i2c_client *client;
 	struct i2c_adapter *adap;
 	struct i2c_dev *i2c_dev;
 
-	i2c_dev = i2c_dev_get_by_minor(minor);
+	i2c_dev = i2c_dev_get_by_minor(minor);//用次设备号搜索链表
 	if (!i2c_dev)
 		return -ENODEV;
+	
+	adap = i2c_get_adapter(i2c_dev->adap->nr);//用适配器号获得适配器对象
 
-	adap = i2c_get_adapter(i2c_dev->adap->nr);
+
+	//通过id号获得适配器指针 (在绑定adapter时驱动绑定adapter)
 	if (!adap)
 		return -ENODEV;
 
@@ -492,7 +495,7 @@ static int i2cdev_open(struct inode *inode, struct file *file)
 	snprintf(client->name, I2C_NAME_SIZE, "i2c-dev %d", adap->nr);
 
 	client->adapter = adap;
-	file->private_data = client;
+	file->private_data = client;   
 
 	return 0;
 }
@@ -520,14 +523,14 @@ static const struct file_operations i2cdev_fops = {
 
 /* ------------------------------------------------------------------------- */
 
-static struct class *i2c_dev_class;
+static struct class *i2c_dev_class;			//sys/class中用到
 
 static int i2cdev_attach_adapter(struct device *dev, void *dummy)
 {
 	struct i2c_adapter *adap;
 	struct i2c_dev *i2c_dev;
 	int res;
-
+	//判断是否为适配器类型的设备, 为什么要判断是否为 adapter类型，难道还有其它的设备类型会加入i2c bus?
 	if (dev->type != &i2c_adapter_type)
 		return 0;
 	adap = to_i2c_adapter(dev);
@@ -537,6 +540,11 @@ static int i2cdev_attach_adapter(struct device *dev, void *dummy)
 		return PTR_ERR(i2c_dev);
 
 	/* register this i2c device with the driver core */
+
+	//创建设备文件
+	//底层有多少个适配器/控制器就创建多少个设备文件
+	// /dev/i2c-0,/dev/i2c-1 ...
+	
 	i2c_dev->dev = device_create(i2c_dev_class, &adap->dev,
 				     MKDEV(I2C_MAJOR, adap->nr), NULL,
 				     "i2c-%d", adap->nr);
@@ -609,11 +617,12 @@ static int __init i2c_dev_init(void)
 	int res;
 
 	printk(KERN_INFO "i2c /dev entries driver\n");
-
-	res = register_chrdev(I2C_MAJOR, "i2c", &i2cdev_fops);
+	//分配设备号,注册操作方法
+	//register_chrdev方法中已经包含了cdev的创建初始化及注册
+	res = register_chrdev(I2C_MAJOR, "i2c", &i2cdev_fops);			
 	if (res)
 		goto out;
-
+	//创建设备类, 设备节点是在i2cdev_attach_adapter匹配函数中进行创建的
 	i2c_dev_class = class_create(THIS_MODULE, "i2c-dev");
 	if (IS_ERR(i2c_dev_class)) {
 		res = PTR_ERR(i2c_dev_class);
@@ -625,6 +634,8 @@ static int __init i2c_dev_init(void)
 	if (res)
 		goto out_unreg_class;
 
+	//绑定已经存在的适配器,匹配适配器
+	//每搜索一个设备,都会调用i2cdev_attach_adapter函数
 	/* Bind to already existing adapters right away */
 	i2c_for_each_dev(NULL, i2cdev_attach_adapter);
 

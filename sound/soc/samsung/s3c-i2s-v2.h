@@ -101,6 +101,13 @@ extern int s3c_i2sv2_probe(struct snd_soc_dai *dai,
  * soc core.
  */
 extern int s3c_i2sv2_register_dai(struct device *dev, int id,
+#define S3C64XX_DIV_BCLK	S3C_I2SV2_DIV_BCLK
+#define S3C64XX_DIV_RCLK	S3C_I2SV2_DIV_RCLK
+#define S3C64XX_DIV_PRESCALER	S3C_I2SV2_DIV_PRESCALER
+
+#define S3C64XX_CLKSRC_PCLK	(0)
+#define S3C64XX_CLKSRC_MUX	(1)
+#define S3C64XX_CLKSRC_CDCLK    (2)
 		struct snd_soc_dai_driver *drv);
 
 #endif /* __SND_SOC_S3C24XX_S3C_I2SV2_I2S_H */

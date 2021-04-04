@@ -161,7 +161,7 @@ struct s3c_fb_palette {
 struct s3c_fb_win {
 	struct s3c_fb_pd_win	*windata;
 	struct s3c_fb		*parent;
-	struct fb_info		*fbinfo;
+	struct fb_info		*fbinfo;//每个窗口就是一个 fb_info
 	struct s3c_fb_palette	 palette;
 	struct s3c_fb_win_variant variant;
 
@@ -206,7 +206,7 @@ struct s3c_fb {
 	unsigned char		 enabled;
 
 	struct s3c_fb_platdata	*pdata;
-	struct s3c_fb_win	*windows[S3C_FB_MAX_WIN];
+	struct s3c_fb_win	*windows[S3C_FB_MAX_WIN];//窗口对象 每个窗口都有一个对象
 
 	int			 irq_no;
 	unsigned long		 irq_flags;
@@ -439,12 +439,12 @@ static void shadow_protect_win(struct s3c_fb_win *win, bool protect)
  */
 static int s3c_fb_set_par(struct fb_info *info)
 {
-	struct fb_var_screeninfo *var = &info->var;
-	struct s3c_fb_win *win = info->par;
-	struct s3c_fb *sfb = win->parent;
+	struct fb_var_screeninfo *var = &info->var;//可变参数
+	struct s3c_fb_win *win = info->par;//窗口结构体
+	struct s3c_fb *sfb = win->parent;//本地结构体
 	void __iomem *regs = sfb->regs;
 	void __iomem *buf = regs;
-	int win_no = win->index;
+	int win_no = win->index;//第几个窗口
 	u32 alpha = 0;
 	u32 data;
 	u32 pagewidth;
@@ -454,7 +454,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	shadow_protect_win(win, 1);
 
-	switch (var->bits_per_pixel) {
+	switch (var->bits_per_pixel) {//各种bpp的处理
 	case 32:
 	case 24:
 	case 16:
@@ -474,23 +474,25 @@ static int s3c_fb_set_par(struct fb_info *info)
 		info->fix.visual = FB_VISUAL_PSEUDOCOLOR;
 		break;
 	}
-
+	//一行像素图像的大小 480*2字节  16bpp/8
 	info->fix.line_length = (var->xres_virtual * var->bits_per_pixel) / 8;
 
 	info->fix.xpanstep = info->var.xres_virtual > info->var.xres ? 1 : 0;
 	info->fix.ypanstep = info->var.yres_virtual > info->var.yres ? 1 : 0;
 
 	/* disable the window whilst we update it */
-	writel(0, regs + WINCON(win_no));
+	writel(0, regs + WINCON(win_no)); //配置窗口0  regs+0x20
 
 	/* use platform specified window as the basis for the lcd timings */
 
+	//以下是lcd时序设置
 	if (win_no == sfb->pdata->default_win) {
 		clkdiv = s3c_fb_calc_pixclk(sfb, var->pixclock);
 
 		data = sfb->pdata->vidcon0;
+		//指定像素时钟
 		data &= ~(VIDCON0_CLKVAL_F_MASK | VIDCON0_CLKDIR);
-
+		//计算像素时钟大小
 		if (clkdiv > 1)
 			data |= VIDCON0_CLKVAL_F(clkdiv-1) | VIDCON0_CLKDIR;
 		else
@@ -500,25 +502,30 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 		if (sfb->variant.is_2443)
 			data |= (1 << 5);
-
+		//启动显示控制信号和帧结束的显示控制信号
 		data |= VIDCON0_ENVID | VIDCON0_ENVID_F;
+
+		//配置VIDCON0
 		writel(data, regs + VIDCON0);
 
+		//垂直方向的时序
 		data = VIDTCON0_VBPD(var->upper_margin - 1) |
 		       VIDTCON0_VFPD(var->lower_margin - 1) |
 		       VIDTCON0_VSPW(var->vsync_len - 1);
-
+		//配置VIDTCON0
 		writel(data, regs + sfb->variant.vidtcon);
-
+		
+		//水平方向的时序
 		data = VIDTCON1_HBPD(var->left_margin - 1) |
 		       VIDTCON1_HFPD(var->right_margin - 1) |
 		       VIDTCON1_HSPW(var->hsync_len - 1);
 
-		/* VIDTCON1 */
+		/* 配置VIDTCON1 */
 		writel(data, regs + sfb->variant.vidtcon + 4);
-
-		data = VIDTCON2_LINEVAL(var->yres - 1) |
-		       VIDTCON2_HOZVAL(var->xres - 1);
+		
+		//设置VIDTCON2  
+		data = VIDTCON2_LINEVAL(var->yres - 1) |  //479
+		       VIDTCON2_HOZVAL(var->xres - 1);         //799
 		writel(data, regs + sfb->variant.vidtcon + 8);
 	}
 
@@ -526,22 +533,24 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	/* start and end registers stride is 8 */
 	buf = regs + win_no * 8;
-
+	//配置窗口显存的起始地址 VIDW00ADDOB0 0xF800_00A0
 	writel(info->fix.smem_start, buf + sfb->variant.buf_start);
-
-	data = info->fix.smem_start + info->fix.line_length * var->yres;
+	//配置窗口显存的结束地址 VIDW00ADD1B0 0xF800_00D0 
+	data = info->fix.smem_start + info->fix.line_length * var->yres;//起始+800*480*2 显存大小
 	writel(data, buf + sfb->variant.buf_end);
 
-	pagewidth = (var->xres * var->bits_per_pixel) >> 3;
+	//配置窗口显存缓冲区大小 VIDW00ADD2 0xF800_0100
+	pagewidth = (var->xres * var->bits_per_pixel) >> 3;//800*16/8 页宽
 	data = VIDW_BUF_SIZE_OFFSET(info->fix.line_length - pagewidth) |
-	       VIDW_BUF_SIZE_PAGEWIDTH(pagewidth);
+	       VIDW_BUF_SIZE_PAGEWIDTH(pagewidth);	
 	writel(data, regs + sfb->variant.buf_size + (win_no * 4));
 
 	/* write 'OSD' registers to control position of framebuffer */
-
+	
+	//配置位置寄存器  VIDOSD0A 0xF800_0040 左上角
 	data = VIDOSDxA_TOPLEFT_X(0) | VIDOSDxA_TOPLEFT_Y(0);
 	writel(data, regs + VIDOSD_A(win_no, sfb->variant));
-
+	//VIDOSD0B 0xF800_0044  右下角
 	data = VIDOSDxB_BOTRIGHT_X(s3c_fb_align_word(var->bits_per_pixel,
 						     var->xres - 1)) |
 	       VIDOSDxB_BOTRIGHT_Y(var->yres - 1);
@@ -553,7 +562,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 	alpha = VIDISD14C_ALPHA1_R(0xf) |
 		VIDISD14C_ALPHA1_G(0xf) |
 		VIDISD14C_ALPHA1_B(0xf);
-
+	//配置 VIDOSD0C  0xF800_0048
 	vidosd_set_alpha(win, alpha);
 	vidosd_set_size(win, data);
 
@@ -594,7 +603,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 		data |= WINCONx_BURSTLEN_8WORD;
 		data |= WINCONx_BYTSWP;
 		break;
-	case 16:
+	case 16: //565
 		if (var->transp.length != 0)
 			data |= WINCON1_BPPMODE_16BPP_A1555;
 		else
@@ -640,6 +649,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 		writel(keycon1_data, keycon + WKEYCON1);
 	}
 
+	//配置WINCON0 0xF800_0020 窗口特性设置
 	writel(data, regs + sfb->variant.wincon + (win_no * 4));
 	writel(0x0, regs + sfb->variant.winmap + (win_no * 4));
 
@@ -1085,38 +1095,47 @@ static void __devinit s3c_fb_missing_pixclock(struct fb_videomode *mode)
 static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 					 struct s3c_fb_win *win)
 {
-	struct s3c_fb_pd_win *windata = win->windata;
+	struct s3c_fb_pd_win *windata = win->windata;//获得平台数据分辨率,时序,bpp参数
 	unsigned int real_size, virt_size, size;
 	struct fb_info *fbi = win->fbinfo;
 	dma_addr_t map_dma;
 
 	dev_dbg(sfb->dev, "allocating memory for display\n");
-
+	//设置各种大小 计算分辨率
 	real_size = windata->win_mode.xres * windata->win_mode.yres;
 	virt_size = windata->virtual_x * windata->virtual_y;
 
 	dev_dbg(sfb->dev, "real_size=%u (%u.%u), virt_size=%u (%u.%u)\n",
 		real_size, windata->win_mode.xres, windata->win_mode.yres,
 		virt_size, windata->virtual_x, windata->virtual_y);
-
+	
 	size = (real_size > virt_size) ? real_size : virt_size;
 	size *= (windata->max_bpp > 16) ? 32 : windata->max_bpp;
 	size /= 8;
 
-	fbi->fix.smem_len = size;
-	size = PAGE_ALIGN(size);
+	fbi->fix.smem_len = size;//800*480*32/8=800*480*4 一帧图像的大小
+	size = PAGE_ALIGN(size);/*页对齐*/
 
 	dev_dbg(sfb->dev, "want %u bytes for window\n", size);
-
-	fbi->screen_base = dma_alloc_writecombine(sfb->dev, size,
+	/*分配出来的显存空间是给DMA用的
+	 *DMA对于空间有要求
+	 *1)要求是连续的
+	 *2)要求是页对齐的
+	 *param1:为哪个设备分配显存空间
+	 *parma2：显存空间的大小
+	 *param3：显存的物理地址
+	 *返回值：显存的虚拟地址
+	*/
+	fbi->screen_base = dma_alloc_writecombine(sfb->dev, size,//内核显存的虚拟地址
 						  &map_dma, GFP_KERNEL);
 	if (!fbi->screen_base)
 		return -ENOMEM;
 
 	dev_dbg(sfb->dev, "mapped %x to %p\n",
 		(unsigned int)map_dma, fbi->screen_base);
-
+	//清0
 	memset(fbi->screen_base, 0x0, size);
+	/*将物理地址保存到固定参数*/
 	fbi->fix.smem_start = map_dma;
 
 	return 0;
@@ -1181,6 +1200,7 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	struct fb_videomode *initmode;
 	struct s3c_fb_pd_win *windata;
 	struct s3c_fb_win *win;
+	//声明fb_info 及相关成员
 	struct fb_info *fbinfo;
 	int palette_size;
 	int ret;
@@ -1190,7 +1210,7 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	init_waitqueue_head(&sfb->vsync_info.wait);
 
 	palette_size = variant->palette_sz * 4;
-
+	//构建fb_info
 	fbinfo = framebuffer_alloc(sizeof(struct s3c_fb_win) +
 				   palette_size * sizeof(u32), sfb->dev);
 	if (!fbinfo) {
@@ -1198,6 +1218,7 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 		return -ENOENT;
 	}
 
+	//各种数据设置,来自平台数据
 	windata = sfb->pdata->win[win_no];
 	initmode = &windata->win_mode;
 
@@ -1214,7 +1235,8 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	win->windata = windata;
 	win->index = win_no;
 	win->palette_buffer = (u32 *)(win + 1);
-
+	
+	//为窗口分配显存空间 (内核虚拟显存,物理显存)
 	ret = s3c_fb_alloc_memory(sfb, win);
 	if (ret) {
 		dev_err(sfb->dev, "failed to allocate display memory\n");
@@ -1242,19 +1264,26 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	}
 
 	/* setup the initial video mode from the window */
+	/*设置fb_info
+	 *设置可变参数 可见分辨率及bpp
+	 *设置固定参数 物理显存地址,大小
+	 */
+
+	//可变参数设置
 	fb_videomode_to_var(&fbinfo->var, initmode);
 
+	//固定参数设置
 	fbinfo->fix.type	= FB_TYPE_PACKED_PIXELS;
 	fbinfo->fix.accel	= FB_ACCEL_NONE;
 	fbinfo->var.activate	= FB_ACTIVATE_NOW;
 	fbinfo->var.vmode	= FB_VMODE_NONINTERLACED;
 	fbinfo->var.bits_per_pixel = windata->default_bpp;
-	fbinfo->fbops		= &s3c_fb_ops;
+	fbinfo->fbops		= &s3c_fb_ops;//应用直接操作内存,可不关注
 	fbinfo->flags		= FBINFO_FLAG_DEFAULT;
 	fbinfo->pseudo_palette  = &win->pseudo_palette;
 
 	/* prepare to actually start the framebuffer */
-
+	//检测参数是否合格 可变参数设置
 	ret = s3c_fb_check_var(&fbinfo->var, fbinfo);
 	if (ret < 0) {
 		dev_err(sfb->dev, "check_var failed on initial video params\n");
@@ -1262,19 +1291,19 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	}
 
 	/* create initial colour map */
-
+	//颜色设置不关注
 	ret = fb_alloc_cmap(&fbinfo->cmap, win->variant.palette_sz, 1);
 	if (ret == 0)
 		fb_set_cmap(&fbinfo->cmap, fbinfo);
 	else
 		dev_err(sfb->dev, "failed to allocate fb cmap\n");
-
+	//时序,窗口配置,关键函数 决定能否正确显示图像.
 	s3c_fb_set_par(fbinfo);
 
 	dev_dbg(sfb->dev, "about to register framebuffer\n");
 
 	/* run the check_var and set_par on our configuration. */
-
+	//帧缓冲设备注册,即fbinfo结构
 	ret = register_framebuffer(fbinfo);
 	if (ret < 0) {
 		dev_err(sfb->dev, "failed to register framebuffer\n");
@@ -1312,7 +1341,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	struct s3c_fb_driverdata *fbdrv;
 	struct device *dev = &pdev->dev;
 	struct s3c_fb_platdata *pd;
-	struct s3c_fb *sfb;
+	struct s3c_fb *sfb;//声明一个本地结构体
 	struct resource *res;
 	int win;
 	int ret = 0;
@@ -1324,13 +1353,13 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		dev_err(dev, "too many windows, cannot attach\n");
 		return -EINVAL;
 	}
-
+	//获得平台数据,分辨率,时序参数,窗口配置
 	pd = pdev->dev.platform_data;
 	if (!pd) {
 		dev_err(dev, "no platform data specified\n");
 		return -EINVAL;
 	}
-
+	//分配本地结构对象
 	sfb = kzalloc(sizeof(struct s3c_fb), GFP_KERNEL);
 	if (!sfb) {
 		dev_err(dev, "no memory for framebuffers\n");
@@ -1338,7 +1367,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	}
 
 	dev_dbg(dev, "allocate new framebuffer %p\n", sfb);
-
+	//设置本地结构体
 	sfb->dev = dev;
 	sfb->pdata = pd;
 	sfb->variant = fbdrv->variant;
@@ -1351,11 +1380,11 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sfb->bus_clk);
 		goto err_sfb;
 	}
-
+	//使能时钟
 	clk_enable(sfb->bus_clk);
 
 	pm_runtime_enable(sfb->dev);
-
+	
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev, "failed to find registers\n");
@@ -1363,6 +1392,8 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 
+	
+	//申请内存资源
 	sfb->regs_res = request_mem_region(res->start, resource_size(res),
 					   dev_name(dev));
 	if (!sfb->regs_res) {
@@ -1370,20 +1401,21 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto err_clk;
 	}
-
+	//映射内存资源 lcd寄存器基地址0xF8000000
 	sfb->regs = ioremap(res->start, resource_size(res));
 	if (!sfb->regs) {
 		dev_err(dev, "failed to map registers\n");
 		ret = -ENXIO;
 		goto err_req_region;
 	}
-
+	
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		dev_err(dev, "failed to acquire irq resource\n");
 		ret = -ENOENT;
 		goto err_ioremap;
 	}
+	//注册中断
 	sfb->irq_no = res->start;
 	ret = request_irq(sfb->irq_no, s3c_fb_irq,
 			  0, "s3c_fb", sfb);
@@ -1398,13 +1430,14 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(sfb->dev);
 
 	/* setup gpio and output polarity controls */
-
+	//功能引脚设置GPF0,GPF1,GPF2 数据线设置
 	pd->setup_gpio();
 
+	//VSYNC,HSYNC极性反转
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
 
 	/* zero all windows before we do anything */
-
+	//窗口对象清零
 	for (win = 0; win < fbdrv->variant.nr_windows; win++)
 		s3c_fb_clear_win(sfb, win);
 
@@ -1425,7 +1458,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 		if (!pd->win[win]->win_mode.pixclock)
 			s3c_fb_missing_pixclock(&pd->win[win]->win_mode);
-
+		//功能窗口设置 本地结构体,
 		ret = s3c_fb_probe_win(sfb, win, fbdrv->win[win],
 				       &sfb->windows[win]);
 		if (ret < 0) {

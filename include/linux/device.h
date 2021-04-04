@@ -81,7 +81,7 @@ extern void bus_remove_file(struct bus_type *, struct bus_attribute *);
  */
 struct bus_type {
 	const char		*name;
-	struct bus_attribute	*bus_attrs;
+	struct bus_attribute	*bus_attrs;				// bus的一些属性
 	struct device_attribute	*dev_attrs;
 	struct driver_attribute	*drv_attrs;
 
@@ -96,7 +96,7 @@ struct bus_type {
 
 	const struct dev_pm_ops *pm;
 
-	struct subsys_private *p;
+	struct subsys_private *p;			//与 sys 文件系统 相关    	  Clark 19-09-13
 };
 
 extern int __must_check bus_register(struct bus_type *bus);
@@ -202,7 +202,7 @@ struct device_driver {
 
 	const struct dev_pm_ops *pm;
 
-	struct driver_private *p;
+	struct driver_private *p;			//driver的私有数据,与kset,kobject等相关
 };
 
 
@@ -429,6 +429,7 @@ struct device_attribute {
 			 const char *buf, size_t count);
 };
 
+// DEVICE_ATTR
 #define DEVICE_ATTR(_name, _mode, _show, _store) \
 struct device_attribute dev_attr_##_name = __ATTR(_name, _mode, _show, _store)
 
@@ -605,6 +606,7 @@ struct device {
 /* Get the wakeup routines, which depend on struct device */
 #include <linux/pm_wakeup.h>
 
+//如何dev的init_name不存在,则返回kobject的names By Clark
 static inline const char *dev_name(const struct device *dev)
 {
 	/* Use the init name until the kobject becomes available */

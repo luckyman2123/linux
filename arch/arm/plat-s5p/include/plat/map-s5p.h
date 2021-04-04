@@ -13,20 +13,25 @@
 #ifndef __ASM_PLAT_MAP_S5P_H
 #define __ASM_PLAT_MAP_S5P_H __FILE__
 
-#define S5P_VA_CHIPID		S3C_ADDR(0x02000000)
-#define S5P_VA_CMU		S3C_ADDR(0x02100000)
-#define S5P_VA_PMU		S3C_ADDR(0x02180000)
-#define S5P_VA_GPIO		S3C_ADDR(0x02200000)
+#define S5P_VA_AUDSS		S3C_ADDR(0X01200000)
+#define S5P_VA_CHIPID		S3C_ADDR(0x01300000)
+#define S5P_VA_CMU		S3C_ADDR(0x01400000)
+#define S5P_VA_PMU		S3C_ADDR(0x01480000)
+#define S5P_VA_GPIO		S3C_ADDR(0x01500000)
 #define S5P_VA_GPIO1		S5P_VA_GPIO
-#define S5P_VA_GPIO2		S3C_ADDR(0x02240000)
-#define S5P_VA_GPIO3		S3C_ADDR(0x02280000)
+#define S5P_VA_GPIO2		S3C_ADDR(0x01540000)
+#define S5P_VA_GPIO3		S3C_ADDR(0x01580000)
+#define S5P_VA_SYSRAM		S3C_ADDR(0x01700000)
+#define S5P_VA_DMC0		S3C_ADDR(0x01740000)
+#define S5P_VA_DMC1		S3C_ADDR(0x01780000)
+#define S5P_VA_SROMC		S3C_ADDR(0x017C0000)
 
-#define S5P_VA_SYSRAM		S3C_ADDR(0x02400000)
-#define S5P_VA_DMC0		S3C_ADDR(0x02440000)
-#define S5P_VA_DMC1		S3C_ADDR(0x02480000)
-#define S5P_VA_SROMC		S3C_ADDR(0x024C0000)
+/* Below commented peripherals are not mapped at boot time in s5pv210 BSP,thus not 
+ * assigned any virtual address.When these peripherals are required to be mapped 
+ * at boot time Virtual addresses should be assigned according to the vmalloc_end 
+ * boundary otherwise the virtual address may overlap with other memory region */
 
-#define S5P_VA_SYSTIMER		S3C_ADDR(0x02500000)
+#if 0
 #define S5P_VA_L2CC		S3C_ADDR(0x02600000)
 
 #define S5P_VA_COMBINER_BASE	S3C_ADDR(0x02700000)
@@ -39,7 +44,9 @@
 #define S5P_VA_TWD		S5P_VA_COREPERI(0x600)
 #define S5P_VA_GIC_DIST		S5P_VA_COREPERI(0x1000)
 
-#define S3C_VA_USB_HSPHY	S3C_ADDR(0x02900000)
+#endif
+#define S5P_VA_SYSTIMER		S3C_ADDR(0x01800000)
+#define S3C_VA_USB_HSPHY	S3C_ADDR(0x01900000)
 
 #define VA_VIC(x)		(S3C_VA_IRQ + ((x) * 0x10000))
 #define VA_VIC0			VA_VIC(0)
