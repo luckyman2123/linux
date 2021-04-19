@@ -460,6 +460,8 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 
 
 /* Are two types/vars the same type (ignoring qualifiers)? */
+
+// comment by Clark:: 此函数为GNU扩展，用来判断两个类型是否相同，如果type_a与 type_b相同的话，就会返回1，否则的话，返回0。  ::2021-3-31
 #ifndef __same_type
 # define __same_type(a, b) __builtin_types_compatible_p(typeof(a), typeof(b))
 #endif

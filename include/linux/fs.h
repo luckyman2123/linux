@@ -614,7 +614,7 @@ struct inode {
 #endif
 
 	const struct inode_operations	*i_op;
-	struct super_block	*i_sb;
+	struct super_block	*i_sb;		// comment by Clark:: 超级块, 文件系统  ::2021-3-31
 	struct address_space	*i_mapping;
 
 #ifdef CONFIG_SECURITY
@@ -631,12 +631,12 @@ struct inode {
 	 *    inode_(inc|dec)_link_count
 	 */
 	union {
-		const unsigned int i_nlink;
+		const unsigned int i_nlink;		// comment by Clark:: 这种写法真有意思  ::2021-3-31
 		unsigned int __i_nlink;
 	};
 	dev_t			i_rdev;
 	loff_t			i_size;
-	struct timespec		i_atime;
+	struct timespec		i_atime;		// comment by Clark:: 时间    ::2021-3-31
 	struct timespec		i_mtime;
 	struct timespec		i_ctime;
 	spinlock_t		i_lock;	/* i_blocks, i_bytes, maybe i_size */
@@ -2026,8 +2026,8 @@ int sync_inode(struct inode *inode, struct writeback_control *wbc);
 int sync_inode_metadata(struct inode *inode, int wait);
 
 struct file_system_type {
-	const char *name;
-	int fs_flags;
+	const char *name;		// comment by Clark:: 文件系统的名字，这个名字唯一的标识一种文件系统；  ::2021-4-1
+	int fs_flags;			
 #define FS_REQUIRES_DEV		1 
 #define FS_BINARY_MOUNTDATA	2
 #define FS_HAS_SUBTYPE		4
@@ -2036,9 +2036,9 @@ struct file_system_type {
 	struct dentry *(*mount) (struct file_system_type *, int,
 		       const char *, void *);
 	void (*kill_sb) (struct super_block *);
-	struct module *owner;
-	struct file_system_type * next;
-	struct hlist_head fs_supers;
+	struct module *owner;				// comment by Clark:: owner是指向module的指针，仅当文件系统类型是以模块方式注册时，owner才有效。  ::2021-4-1
+	struct file_system_type * next;		// comment by Clark:: 为文件系统的链表指针, 内核中用一个名为 file_systems 的全局变量来指向该链表的表头  ::2021-4-1
+	struct hlist_head fs_supers;		// comment by Clark:: 对于每一个mount的文件系统，系统都会为它创建一个super_block数据结构，该结构保存文件系统本省以及挂载点相关的信息。由于可以同时挂载多个同一文件系统类型的文件系统（比如/ 和/home都挂载了ext3文件系统），因此同一个文件系统类型会对应多个super block，@fs_supers就把这个文件系统类型对应的super block链接起来。  ::2021-4-1
 
 	struct lock_class_key s_lock_key;
 	struct lock_class_key s_umount_key;
