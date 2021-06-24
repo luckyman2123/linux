@@ -120,7 +120,7 @@ void (*__initdata late_time_init)(void);
 extern void softirq_init(void);
 
 /* Untouched command line saved by arch-specific code. */
-/* comment by clark :: __initdata ¶¨Òå ÔÚ include/linux/init.h  ÎÄ¼şÖĞ*/
+/* comment by clark :: __initdata å®šä¹‰ åœ¨ include/linux/init.h  æ–‡ä»¶ä¸­*/
 char __initdata boot_command_line[COMMAND_LINE_SIZE];
 /* Untouched saved command line (eg. for /proc) */
 char *saved_command_line;
@@ -454,13 +454,13 @@ static void __init mm_init(void)
 	vmalloc_init();
 }
 
-/* comment by clark :: asmlinkage: ½«º¯Êı²ÎÊı´æ·ÅÔÚ¾Ö²¿Õ»ÖĞ  FASTCALL: Í¨Öª±àÒëÆ÷½«º¯Êı²ÎÊıÓÃ¼Ä´æÆ÷±£´æÆğÀ´(R0~R4)*/
-/* comment by clark :: ±»extern ¡°C¡±ÏŞ¶¨µÄº¯Êı»ò±äÁ¿ÊÇexternÀàĞÍµÄexternÊÇC/C++ÓïÑÔÖĞ±íÃ÷º¯ÊıºÍÈ«¾Ö±äÁ¿×÷ÓÃ·¶Î§£¨¿É¼ûĞÔ£©µÄ¹Ø¼ü×Ö£¬
-/* comment by clark :: ¸Ã¹Ø¼ü×Ö¸æËß±àÒëÆ÷£¬ÆäÉùÃ÷µÄº¯ÊıºÍ±äÁ¿¿ÉÒÔÔÚ±¾Ä£¿é»òÆäËüÄ£¿éÖĞÊ¹ÓÃ¡£Óëextern¶ÔÓ¦µÄ¹Ø¼ü×ÖÊÇstatic£¬*/
-/* comment by clark :: ±»ËüĞŞÊÎµÄÈ«¾Ö±äÁ¿ºÍº¯ÊıÖ»ÄÜÔÚ±¾Ä£¿éÖĞÊ¹ÓÃ¡£Òò´Ë£¬Ò»¸öº¯Êı»ò±äÁ¿Ö»¿ÉÄÜ±»±¾Ä£¿éÊ¹ÓÃÊ±£¬Æä²»¿ÉÄÜ±»extern ¡°C¡±ĞŞÊÎ¡£*/
-/* comment by clark :: ±»extern "C"ĞŞÊÎµÄ±äÁ¿ºÍº¯ÊıÊÇ°´ÕÕCÓïÑÔ·½Ê½±àÒëºÍÁ¬½ÓµÄ¡£*/
-/* comment by clark :: ARMÆ½Ì¨Î´¾ßÌå¶¨ÒåÉÏÊöÁ½ÖÖºê£¬Ä¬ÈÏÍ¨¹ı¼Ä´æÆ÷´«µİº¯Êı²ÎÊı£¬Èô²ÎÊı´óÓÚ5¸ö£¬¶àÓàµÄ²ÎÊı»áÍ¨¹ı¾Ö²¿Õ»½øĞĞ´«µİ¡£*/
-/* comment by clark :: start_kernel ÔÚ head_common.S ÖĞµ÷ÓÃ */
+/* comment by clark :: asmlinkage: å°†å‡½æ•°å‚æ•°å­˜æ”¾åœ¨å±€éƒ¨æ ˆä¸­  FASTCALL: é€šçŸ¥ç¼–è¯‘å™¨å°†å‡½æ•°å‚æ•°ç”¨å¯„å­˜å™¨ä¿å­˜èµ·æ¥(R0~R4)*/
+/* comment by clark :: è¢«extern â€œCâ€é™å®šçš„å‡½æ•°æˆ–å˜é‡æ˜¯externç±»å‹çš„externæ˜¯C/C++è¯­è¨€ä¸­è¡¨æ˜å‡½æ•°å’Œå…¨å±€å˜é‡ä½œç”¨èŒƒå›´ï¼ˆå¯è§æ€§ï¼‰çš„å…³é”®å­—ï¼Œ
+/* comment by clark :: è¯¥å…³é”®å­—å‘Šè¯‰ç¼–è¯‘å™¨ï¼Œå…¶å£°æ˜çš„å‡½æ•°å’Œå˜é‡å¯ä»¥åœ¨æœ¬æ¨¡å—æˆ–å…¶å®ƒæ¨¡å—ä¸­ä½¿ç”¨ã€‚ä¸externå¯¹åº”çš„å…³é”®å­—æ˜¯staticï¼Œ*/
+/* comment by clark :: è¢«å®ƒä¿®é¥°çš„å…¨å±€å˜é‡å’Œå‡½æ•°åªèƒ½åœ¨æœ¬æ¨¡å—ä¸­ä½¿ç”¨ã€‚å› æ­¤ï¼Œä¸€ä¸ªå‡½æ•°æˆ–å˜é‡åªå¯èƒ½è¢«æœ¬æ¨¡å—ä½¿ç”¨æ—¶ï¼Œå…¶ä¸å¯èƒ½è¢«extern â€œCâ€ä¿®é¥°ã€‚*/
+/* comment by clark :: è¢«extern "C"ä¿®é¥°çš„å˜é‡å’Œå‡½æ•°æ˜¯æŒ‰ç…§Cè¯­è¨€æ–¹å¼ç¼–è¯‘å’Œè¿æ¥çš„ã€‚*/
+/* comment by clark :: ARMå¹³å°æœªå…·ä½“å®šä¹‰ä¸Šè¿°ä¸¤ç§å®ï¼Œé»˜è®¤é€šè¿‡å¯„å­˜å™¨ä¼ é€’å‡½æ•°å‚æ•°ï¼Œè‹¥å‚æ•°å¤§äº5ä¸ªï¼Œå¤šä½™çš„å‚æ•°ä¼šé€šè¿‡å±€éƒ¨æ ˆè¿›è¡Œä¼ é€’ã€‚*/
+/* comment by clark :: start_kernel åœ¨ head_common.S ä¸­è°ƒç”¨ */
 
 asmlinkage void __init start_kernel(void)
 {

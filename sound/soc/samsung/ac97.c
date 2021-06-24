@@ -251,7 +251,7 @@ static int s3c_ac97_hw_params(struct snd_pcm_substream *substream,
 	s3c_ac97_write(codec, 0x0c, 0x0808);
 	s3c_ac97_write(codec,0x3c, 0xf803);
 	s3c_ac97_write(codec,0x3e,0xb990);
-	s3c_ac97_write(codec,0x62,0xda83);//Ìí¼ÓÄÚÈÝ
+	s3c_ac97_write(codec,0x62,0xda83);//æ·»åŠ å†…å®¹
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		s3c_ac97_write(codec, 0x02, 0x0404);//8080
 		s3c_ac97_write(codec, 0x04, 0x0606);

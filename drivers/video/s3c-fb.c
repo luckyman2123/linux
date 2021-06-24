@@ -161,7 +161,7 @@ struct s3c_fb_palette {
 struct s3c_fb_win {
 	struct s3c_fb_pd_win	*windata;
 	struct s3c_fb		*parent;
-	struct fb_info		*fbinfo;//Ã¿¸ö´°¿Ú¾ÍÊÇÒ»¸ö fb_info
+	struct fb_info		*fbinfo;//æ¯ä¸ªçª—å£å°±æ˜¯ä¸€ä¸ª fb_info
 	struct s3c_fb_palette	 palette;
 	struct s3c_fb_win_variant variant;
 
@@ -206,7 +206,7 @@ struct s3c_fb {
 	unsigned char		 enabled;
 
 	struct s3c_fb_platdata	*pdata;
-	struct s3c_fb_win	*windows[S3C_FB_MAX_WIN];//´°¿Ú¶ÔÏó Ã¿¸ö´°¿Ú¶¼ÓĞÒ»¸ö¶ÔÏó
+	struct s3c_fb_win	*windows[S3C_FB_MAX_WIN];//çª—å£å¯¹è±¡ æ¯ä¸ªçª—å£éƒ½æœ‰ä¸€ä¸ªå¯¹è±¡
 
 	int			 irq_no;
 	unsigned long		 irq_flags;
@@ -439,12 +439,12 @@ static void shadow_protect_win(struct s3c_fb_win *win, bool protect)
  */
 static int s3c_fb_set_par(struct fb_info *info)
 {
-	struct fb_var_screeninfo *var = &info->var;//¿É±ä²ÎÊı
-	struct s3c_fb_win *win = info->par;//´°¿Ú½á¹¹Ìå
-	struct s3c_fb *sfb = win->parent;//±¾µØ½á¹¹Ìå
+	struct fb_var_screeninfo *var = &info->var;//å¯å˜å‚æ•°
+	struct s3c_fb_win *win = info->par;//çª—å£ç»“æ„ä½“
+	struct s3c_fb *sfb = win->parent;//æœ¬åœ°ç»“æ„ä½“
 	void __iomem *regs = sfb->regs;
 	void __iomem *buf = regs;
-	int win_no = win->index;//µÚ¼¸¸ö´°¿Ú
+	int win_no = win->index;//ç¬¬å‡ ä¸ªçª—å£
 	u32 alpha = 0;
 	u32 data;
 	u32 pagewidth;
@@ -454,7 +454,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	shadow_protect_win(win, 1);
 
-	switch (var->bits_per_pixel) {//¸÷ÖÖbppµÄ´¦Àí
+	switch (var->bits_per_pixel) {//å„ç§bppçš„å¤„ç†
 	case 32:
 	case 24:
 	case 16:
@@ -474,25 +474,25 @@ static int s3c_fb_set_par(struct fb_info *info)
 		info->fix.visual = FB_VISUAL_PSEUDOCOLOR;
 		break;
 	}
-	//Ò»ĞĞÏñËØÍ¼ÏñµÄ´óĞ¡ 480*2×Ö½Ú  16bpp/8
+	//ä¸€è¡Œåƒç´ å›¾åƒçš„å¤§å° 480*2å­—èŠ‚  16bpp/8
 	info->fix.line_length = (var->xres_virtual * var->bits_per_pixel) / 8;
 
 	info->fix.xpanstep = info->var.xres_virtual > info->var.xres ? 1 : 0;
 	info->fix.ypanstep = info->var.yres_virtual > info->var.yres ? 1 : 0;
 
 	/* disable the window whilst we update it */
-	writel(0, regs + WINCON(win_no)); //ÅäÖÃ´°¿Ú0  regs+0x20
+	writel(0, regs + WINCON(win_no)); //é…ç½®çª—å£0  regs+0x20
 
 	/* use platform specified window as the basis for the lcd timings */
 
-	//ÒÔÏÂÊÇlcdÊ±ĞòÉèÖÃ
+	//ä»¥ä¸‹æ˜¯lcdæ—¶åºè®¾ç½®
 	if (win_no == sfb->pdata->default_win) {
 		clkdiv = s3c_fb_calc_pixclk(sfb, var->pixclock);
 
 		data = sfb->pdata->vidcon0;
-		//Ö¸¶¨ÏñËØÊ±ÖÓ
+		//æŒ‡å®šåƒç´ æ—¶é’Ÿ
 		data &= ~(VIDCON0_CLKVAL_F_MASK | VIDCON0_CLKDIR);
-		//¼ÆËãÏñËØÊ±ÖÓ´óĞ¡
+		//è®¡ç®—åƒç´ æ—¶é’Ÿå¤§å°
 		if (clkdiv > 1)
 			data |= VIDCON0_CLKVAL_F(clkdiv-1) | VIDCON0_CLKDIR;
 		else
@@ -502,28 +502,28 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 		if (sfb->variant.is_2443)
 			data |= (1 << 5);
-		//Æô¶¯ÏÔÊ¾¿ØÖÆĞÅºÅºÍÖ¡½áÊøµÄÏÔÊ¾¿ØÖÆĞÅºÅ
+		//å¯åŠ¨æ˜¾ç¤ºæ§åˆ¶ä¿¡å·å’Œå¸§ç»“æŸçš„æ˜¾ç¤ºæ§åˆ¶ä¿¡å·
 		data |= VIDCON0_ENVID | VIDCON0_ENVID_F;
 
-		//ÅäÖÃVIDCON0
+		//é…ç½®VIDCON0
 		writel(data, regs + VIDCON0);
 
-		//´¹Ö±·½ÏòµÄÊ±Ğò
+		//å‚ç›´æ–¹å‘çš„æ—¶åº
 		data = VIDTCON0_VBPD(var->upper_margin - 1) |
 		       VIDTCON0_VFPD(var->lower_margin - 1) |
 		       VIDTCON0_VSPW(var->vsync_len - 1);
-		//ÅäÖÃVIDTCON0
+		//é…ç½®VIDTCON0
 		writel(data, regs + sfb->variant.vidtcon);
 		
-		//Ë®Æ½·½ÏòµÄÊ±Ğò
+		//æ°´å¹³æ–¹å‘çš„æ—¶åº
 		data = VIDTCON1_HBPD(var->left_margin - 1) |
 		       VIDTCON1_HFPD(var->right_margin - 1) |
 		       VIDTCON1_HSPW(var->hsync_len - 1);
 
-		/* ÅäÖÃVIDTCON1 */
+		/* é…ç½®VIDTCON1 */
 		writel(data, regs + sfb->variant.vidtcon + 4);
 		
-		//ÉèÖÃVIDTCON2  
+		//è®¾ç½®VIDTCON2  
 		data = VIDTCON2_LINEVAL(var->yres - 1) |  //479
 		       VIDTCON2_HOZVAL(var->xres - 1);         //799
 		writel(data, regs + sfb->variant.vidtcon + 8);
@@ -533,24 +533,24 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	/* start and end registers stride is 8 */
 	buf = regs + win_no * 8;
-	//ÅäÖÃ´°¿ÚÏÔ´æµÄÆğÊ¼µØÖ· VIDW00ADDOB0 0xF800_00A0
+	//é…ç½®çª—å£æ˜¾å­˜çš„èµ·å§‹åœ°å€ VIDW00ADDOB0 0xF800_00A0
 	writel(info->fix.smem_start, buf + sfb->variant.buf_start);
-	//ÅäÖÃ´°¿ÚÏÔ´æµÄ½áÊøµØÖ· VIDW00ADD1B0 0xF800_00D0 
-	data = info->fix.smem_start + info->fix.line_length * var->yres;//ÆğÊ¼+800*480*2 ÏÔ´æ´óĞ¡
+	//é…ç½®çª—å£æ˜¾å­˜çš„ç»“æŸåœ°å€ VIDW00ADD1B0 0xF800_00D0 
+	data = info->fix.smem_start + info->fix.line_length * var->yres;//èµ·å§‹+800*480*2 æ˜¾å­˜å¤§å°
 	writel(data, buf + sfb->variant.buf_end);
 
-	//ÅäÖÃ´°¿ÚÏÔ´æ»º³åÇø´óĞ¡ VIDW00ADD2 0xF800_0100
-	pagewidth = (var->xres * var->bits_per_pixel) >> 3;//800*16/8 Ò³¿í
+	//é…ç½®çª—å£æ˜¾å­˜ç¼“å†²åŒºå¤§å° VIDW00ADD2 0xF800_0100
+	pagewidth = (var->xres * var->bits_per_pixel) >> 3;//800*16/8 é¡µå®½
 	data = VIDW_BUF_SIZE_OFFSET(info->fix.line_length - pagewidth) |
 	       VIDW_BUF_SIZE_PAGEWIDTH(pagewidth);	
 	writel(data, regs + sfb->variant.buf_size + (win_no * 4));
 
 	/* write 'OSD' registers to control position of framebuffer */
 	
-	//ÅäÖÃÎ»ÖÃ¼Ä´æÆ÷  VIDOSD0A 0xF800_0040 ×óÉÏ½Ç
+	//é…ç½®ä½ç½®å¯„å­˜å™¨  VIDOSD0A 0xF800_0040 å·¦ä¸Šè§’
 	data = VIDOSDxA_TOPLEFT_X(0) | VIDOSDxA_TOPLEFT_Y(0);
 	writel(data, regs + VIDOSD_A(win_no, sfb->variant));
-	//VIDOSD0B 0xF800_0044  ÓÒÏÂ½Ç
+	//VIDOSD0B 0xF800_0044  å³ä¸‹è§’
 	data = VIDOSDxB_BOTRIGHT_X(s3c_fb_align_word(var->bits_per_pixel,
 						     var->xres - 1)) |
 	       VIDOSDxB_BOTRIGHT_Y(var->yres - 1);
@@ -562,7 +562,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 	alpha = VIDISD14C_ALPHA1_R(0xf) |
 		VIDISD14C_ALPHA1_G(0xf) |
 		VIDISD14C_ALPHA1_B(0xf);
-	//ÅäÖÃ VIDOSD0C  0xF800_0048
+	//é…ç½® VIDOSD0C  0xF800_0048
 	vidosd_set_alpha(win, alpha);
 	vidosd_set_size(win, data);
 
@@ -649,7 +649,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 		writel(keycon1_data, keycon + WKEYCON1);
 	}
 
-	//ÅäÖÃWINCON0 0xF800_0020 ´°¿ÚÌØĞÔÉèÖÃ
+	//é…ç½®WINCON0 0xF800_0020 çª—å£ç‰¹æ€§è®¾ç½®
 	writel(data, regs + sfb->variant.wincon + (win_no * 4));
 	writel(0x0, regs + sfb->variant.winmap + (win_no * 4));
 
@@ -1095,13 +1095,13 @@ static void __devinit s3c_fb_missing_pixclock(struct fb_videomode *mode)
 static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 					 struct s3c_fb_win *win)
 {
-	struct s3c_fb_pd_win *windata = win->windata;//»ñµÃÆ½Ì¨Êı¾İ·Ö±æÂÊ,Ê±Ğò,bpp²ÎÊı
+	struct s3c_fb_pd_win *windata = win->windata;//è·å¾—å¹³å°æ•°æ®åˆ†è¾¨ç‡,æ—¶åº,bppå‚æ•°
 	unsigned int real_size, virt_size, size;
 	struct fb_info *fbi = win->fbinfo;
 	dma_addr_t map_dma;
 
 	dev_dbg(sfb->dev, "allocating memory for display\n");
-	//ÉèÖÃ¸÷ÖÖ´óĞ¡ ¼ÆËã·Ö±æÂÊ
+	//è®¾ç½®å„ç§å¤§å° è®¡ç®—åˆ†è¾¨ç‡
 	real_size = windata->win_mode.xres * windata->win_mode.yres;
 	virt_size = windata->virtual_x * windata->virtual_y;
 
@@ -1113,29 +1113,29 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	size *= (windata->max_bpp > 16) ? 32 : windata->max_bpp;
 	size /= 8;
 
-	fbi->fix.smem_len = size;//800*480*32/8=800*480*4 Ò»Ö¡Í¼ÏñµÄ´óĞ¡
-	size = PAGE_ALIGN(size);/*Ò³¶ÔÆë*/
+	fbi->fix.smem_len = size;//800*480*32/8=800*480*4 ä¸€å¸§å›¾åƒçš„å¤§å°
+	size = PAGE_ALIGN(size);/*é¡µå¯¹é½*/
 
 	dev_dbg(sfb->dev, "want %u bytes for window\n", size);
-	/*·ÖÅä³öÀ´µÄÏÔ´æ¿Õ¼äÊÇ¸øDMAÓÃµÄ
-	 *DMA¶ÔÓÚ¿Õ¼äÓĞÒªÇó
-	 *1)ÒªÇóÊÇÁ¬ĞøµÄ
-	 *2)ÒªÇóÊÇÒ³¶ÔÆëµÄ
-	 *param1:ÎªÄÄ¸öÉè±¸·ÖÅäÏÔ´æ¿Õ¼ä
-	 *parma2£ºÏÔ´æ¿Õ¼äµÄ´óĞ¡
-	 *param3£ºÏÔ´æµÄÎïÀíµØÖ·
-	 *·µ»ØÖµ£ºÏÔ´æµÄĞéÄâµØÖ·
+	/*åˆ†é…å‡ºæ¥çš„æ˜¾å­˜ç©ºé—´æ˜¯ç»™DMAç”¨çš„
+	 *DMAå¯¹äºç©ºé—´æœ‰è¦æ±‚
+	 *1)è¦æ±‚æ˜¯è¿ç»­çš„
+	 *2)è¦æ±‚æ˜¯é¡µå¯¹é½çš„
+	 *param1:ä¸ºå“ªä¸ªè®¾å¤‡åˆ†é…æ˜¾å­˜ç©ºé—´
+	 *parma2ï¼šæ˜¾å­˜ç©ºé—´çš„å¤§å°
+	 *param3ï¼šæ˜¾å­˜çš„ç‰©ç†åœ°å€
+	 *è¿”å›å€¼ï¼šæ˜¾å­˜çš„è™šæ‹Ÿåœ°å€
 	*/
-	fbi->screen_base = dma_alloc_writecombine(sfb->dev, size,//ÄÚºËÏÔ´æµÄĞéÄâµØÖ·
+	fbi->screen_base = dma_alloc_writecombine(sfb->dev, size,//å†…æ ¸æ˜¾å­˜çš„è™šæ‹Ÿåœ°å€
 						  &map_dma, GFP_KERNEL);
 	if (!fbi->screen_base)
 		return -ENOMEM;
 
 	dev_dbg(sfb->dev, "mapped %x to %p\n",
 		(unsigned int)map_dma, fbi->screen_base);
-	//Çå0
+	//æ¸…0
 	memset(fbi->screen_base, 0x0, size);
-	/*½«ÎïÀíµØÖ·±£´æµ½¹Ì¶¨²ÎÊı*/
+	/*å°†ç‰©ç†åœ°å€ä¿å­˜åˆ°å›ºå®šå‚æ•°*/
 	fbi->fix.smem_start = map_dma;
 
 	return 0;
@@ -1200,7 +1200,7 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	struct fb_videomode *initmode;
 	struct s3c_fb_pd_win *windata;
 	struct s3c_fb_win *win;
-	//ÉùÃ÷fb_info ¼°Ïà¹Ø³ÉÔ±
+	//å£°æ˜fb_info åŠç›¸å…³æˆå‘˜
 	struct fb_info *fbinfo;
 	int palette_size;
 	int ret;
@@ -1210,7 +1210,7 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	init_waitqueue_head(&sfb->vsync_info.wait);
 
 	palette_size = variant->palette_sz * 4;
-	//¹¹½¨fb_info
+	//æ„å»ºfb_info
 	fbinfo = framebuffer_alloc(sizeof(struct s3c_fb_win) +
 				   palette_size * sizeof(u32), sfb->dev);
 	if (!fbinfo) {
@@ -1218,7 +1218,7 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 		return -ENOENT;
 	}
 
-	//¸÷ÖÖÊı¾İÉèÖÃ,À´×ÔÆ½Ì¨Êı¾İ
+	//å„ç§æ•°æ®è®¾ç½®,æ¥è‡ªå¹³å°æ•°æ®
 	windata = sfb->pdata->win[win_no];
 	initmode = &windata->win_mode;
 
@@ -1236,7 +1236,7 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	win->index = win_no;
 	win->palette_buffer = (u32 *)(win + 1);
 	
-	//Îª´°¿Ú·ÖÅäÏÔ´æ¿Õ¼ä (ÄÚºËĞéÄâÏÔ´æ,ÎïÀíÏÔ´æ)
+	//ä¸ºçª—å£åˆ†é…æ˜¾å­˜ç©ºé—´ (å†…æ ¸è™šæ‹Ÿæ˜¾å­˜,ç‰©ç†æ˜¾å­˜)
 	ret = s3c_fb_alloc_memory(sfb, win);
 	if (ret) {
 		dev_err(sfb->dev, "failed to allocate display memory\n");
@@ -1264,26 +1264,26 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	}
 
 	/* setup the initial video mode from the window */
-	/*ÉèÖÃfb_info
-	 *ÉèÖÃ¿É±ä²ÎÊı ¿É¼û·Ö±æÂÊ¼°bpp
-	 *ÉèÖÃ¹Ì¶¨²ÎÊı ÎïÀíÏÔ´æµØÖ·,´óĞ¡
+	/*è®¾ç½®fb_info
+	 *è®¾ç½®å¯å˜å‚æ•° å¯è§åˆ†è¾¨ç‡åŠbpp
+	 *è®¾ç½®å›ºå®šå‚æ•° ç‰©ç†æ˜¾å­˜åœ°å€,å¤§å°
 	 */
 
-	//¿É±ä²ÎÊıÉèÖÃ
+	//å¯å˜å‚æ•°è®¾ç½®
 	fb_videomode_to_var(&fbinfo->var, initmode);
 
-	//¹Ì¶¨²ÎÊıÉèÖÃ
+	//å›ºå®šå‚æ•°è®¾ç½®
 	fbinfo->fix.type	= FB_TYPE_PACKED_PIXELS;
 	fbinfo->fix.accel	= FB_ACCEL_NONE;
 	fbinfo->var.activate	= FB_ACTIVATE_NOW;
 	fbinfo->var.vmode	= FB_VMODE_NONINTERLACED;
 	fbinfo->var.bits_per_pixel = windata->default_bpp;
-	fbinfo->fbops		= &s3c_fb_ops;//Ó¦ÓÃÖ±½Ó²Ù×÷ÄÚ´æ,¿É²»¹Ø×¢
+	fbinfo->fbops		= &s3c_fb_ops;//åº”ç”¨ç›´æ¥æ“ä½œå†…å­˜,å¯ä¸å…³æ³¨
 	fbinfo->flags		= FBINFO_FLAG_DEFAULT;
 	fbinfo->pseudo_palette  = &win->pseudo_palette;
 
 	/* prepare to actually start the framebuffer */
-	//¼ì²â²ÎÊıÊÇ·ñºÏ¸ñ ¿É±ä²ÎÊıÉèÖÃ
+	//æ£€æµ‹å‚æ•°æ˜¯å¦åˆæ ¼ å¯å˜å‚æ•°è®¾ç½®
 	ret = s3c_fb_check_var(&fbinfo->var, fbinfo);
 	if (ret < 0) {
 		dev_err(sfb->dev, "check_var failed on initial video params\n");
@@ -1291,19 +1291,19 @@ static int __devinit s3c_fb_probe_win(struct s3c_fb *sfb, unsigned int win_no,
 	}
 
 	/* create initial colour map */
-	//ÑÕÉ«ÉèÖÃ²»¹Ø×¢
+	//é¢œè‰²è®¾ç½®ä¸å…³æ³¨
 	ret = fb_alloc_cmap(&fbinfo->cmap, win->variant.palette_sz, 1);
 	if (ret == 0)
 		fb_set_cmap(&fbinfo->cmap, fbinfo);
 	else
 		dev_err(sfb->dev, "failed to allocate fb cmap\n");
-	//Ê±Ğò,´°¿ÚÅäÖÃ,¹Ø¼üº¯Êı ¾ö¶¨ÄÜ·ñÕıÈ·ÏÔÊ¾Í¼Ïñ.
+	//æ—¶åº,çª—å£é…ç½®,å…³é”®å‡½æ•° å†³å®šèƒ½å¦æ­£ç¡®æ˜¾ç¤ºå›¾åƒ.
 	s3c_fb_set_par(fbinfo);
 
 	dev_dbg(sfb->dev, "about to register framebuffer\n");
 
 	/* run the check_var and set_par on our configuration. */
-	//Ö¡»º³åÉè±¸×¢²á,¼´fbinfo½á¹¹
+	//å¸§ç¼“å†²è®¾å¤‡æ³¨å†Œ,å³fbinfoç»“æ„
 	ret = register_framebuffer(fbinfo);
 	if (ret < 0) {
 		dev_err(sfb->dev, "failed to register framebuffer\n");
@@ -1341,7 +1341,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	struct s3c_fb_driverdata *fbdrv;
 	struct device *dev = &pdev->dev;
 	struct s3c_fb_platdata *pd;
-	struct s3c_fb *sfb;//ÉùÃ÷Ò»¸ö±¾µØ½á¹¹Ìå
+	struct s3c_fb *sfb;//å£°æ˜ä¸€ä¸ªæœ¬åœ°ç»“æ„ä½“
 	struct resource *res;
 	int win;
 	int ret = 0;
@@ -1353,13 +1353,13 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		dev_err(dev, "too many windows, cannot attach\n");
 		return -EINVAL;
 	}
-	//»ñµÃÆ½Ì¨Êı¾İ,·Ö±æÂÊ,Ê±Ğò²ÎÊı,´°¿ÚÅäÖÃ
+	//è·å¾—å¹³å°æ•°æ®,åˆ†è¾¨ç‡,æ—¶åºå‚æ•°,çª—å£é…ç½®
 	pd = pdev->dev.platform_data;
 	if (!pd) {
 		dev_err(dev, "no platform data specified\n");
 		return -EINVAL;
 	}
-	//·ÖÅä±¾µØ½á¹¹¶ÔÏó
+	//åˆ†é…æœ¬åœ°ç»“æ„å¯¹è±¡
 	sfb = kzalloc(sizeof(struct s3c_fb), GFP_KERNEL);
 	if (!sfb) {
 		dev_err(dev, "no memory for framebuffers\n");
@@ -1367,7 +1367,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	}
 
 	dev_dbg(dev, "allocate new framebuffer %p\n", sfb);
-	//ÉèÖÃ±¾µØ½á¹¹Ìå
+	//è®¾ç½®æœ¬åœ°ç»“æ„ä½“
 	sfb->dev = dev;
 	sfb->pdata = pd;
 	sfb->variant = fbdrv->variant;
@@ -1380,7 +1380,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sfb->bus_clk);
 		goto err_sfb;
 	}
-	//Ê¹ÄÜÊ±ÖÓ
+	//ä½¿èƒ½æ—¶é’Ÿ
 	clk_enable(sfb->bus_clk);
 
 	pm_runtime_enable(sfb->dev);
@@ -1393,7 +1393,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	}
 
 	
-	//ÉêÇëÄÚ´æ×ÊÔ´
+	//ç”³è¯·å†…å­˜èµ„æº
 	sfb->regs_res = request_mem_region(res->start, resource_size(res),
 					   dev_name(dev));
 	if (!sfb->regs_res) {
@@ -1401,7 +1401,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto err_clk;
 	}
-	//Ó³ÉäÄÚ´æ×ÊÔ´ lcd¼Ä´æÆ÷»ùµØÖ·0xF8000000
+	//æ˜ å°„å†…å­˜èµ„æº lcdå¯„å­˜å™¨åŸºåœ°å€0xF8000000
 	sfb->regs = ioremap(res->start, resource_size(res));
 	if (!sfb->regs) {
 		dev_err(dev, "failed to map registers\n");
@@ -1415,7 +1415,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto err_ioremap;
 	}
-	//×¢²áÖĞ¶Ï
+	//æ³¨å†Œä¸­æ–­
 	sfb->irq_no = res->start;
 	ret = request_irq(sfb->irq_no, s3c_fb_irq,
 			  0, "s3c_fb", sfb);
@@ -1430,14 +1430,14 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(sfb->dev);
 
 	/* setup gpio and output polarity controls */
-	//¹¦ÄÜÒı½ÅÉèÖÃGPF0,GPF1,GPF2 Êı¾İÏßÉèÖÃ
+	//åŠŸèƒ½å¼•è„šè®¾ç½®GPF0,GPF1,GPF2 æ•°æ®çº¿è®¾ç½®
 	pd->setup_gpio();
 
-	//VSYNC,HSYNC¼«ĞÔ·´×ª
+	//VSYNC,HSYNCææ€§åè½¬
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
 
 	/* zero all windows before we do anything */
-	//´°¿Ú¶ÔÏóÇåÁã
+	//çª—å£å¯¹è±¡æ¸…é›¶
 	for (win = 0; win < fbdrv->variant.nr_windows; win++)
 		s3c_fb_clear_win(sfb, win);
 
@@ -1458,7 +1458,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 		if (!pd->win[win]->win_mode.pixclock)
 			s3c_fb_missing_pixclock(&pd->win[win]->win_mode);
-		//¹¦ÄÜ´°¿ÚÉèÖÃ ±¾µØ½á¹¹Ìå,
+		//åŠŸèƒ½çª—å£è®¾ç½® æœ¬åœ°ç»“æ„ä½“,
 		ret = s3c_fb_probe_win(sfb, win, fbdrv->win[win],
 				       &sfb->windows[win]);
 		if (ret < 0) {

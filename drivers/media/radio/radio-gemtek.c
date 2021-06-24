@@ -33,7 +33,7 @@
  * Module info.
  */
 
-MODULE_AUTHOR("Jonas Munsin, Pekka Seppänen <pexu@kapsi.fi>");
+MODULE_AUTHOR("Jonas Munsin, Pekka Seppé‹˜en <pexu@kapsi.fi>");
 MODULE_DESCRIPTION("A driver for the GemTek Radio card.");
 MODULE_LICENSE("GPL");
 

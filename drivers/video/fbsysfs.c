@@ -516,7 +516,7 @@ int fb_init_device(struct fb_info *fb_info)
 	fb_info->class_flag |= FB_SYSFS_FLAG_ATTR;
 
 	for (i = 0; i < ARRAY_SIZE(device_attrs); i++) {
-		error = device_create_file(fb_info->dev, &device_attrs[i]);			//´´½¨ÊôÐÔÎÄ¼þ
+		error = device_create_file(fb_info->dev, &device_attrs[i]);			//åˆ›å»ºå±žæ€§æ–‡ä»¶
 
 		if (error)
 			break;

@@ -675,16 +675,16 @@ static struct platform_device smdkv210_lcd_lte480wv = {
 	.dev.platform_data	= &smdkv210_lcd_lte480wv_data,
 };
 
-#if 1 //ÄÚºË»ù±¾´úÂë
+#if 1 //å†…æ ¸åŸºæœ¬ä»£ç 
 static struct s3c_fb_pd_win smdkv210_fb_win0 = {
 	.win_mode = {
-		.left_margin	= 13,//Ê±Ğò²ÎÊı
+		.left_margin	= 13,//æ—¶åºå‚æ•°
 		.right_margin	= 8,
 		.upper_margin	= 7,
 		.lower_margin	= 5,
 		.hsync_len	= 3,
 		.vsync_len	= 1,
-		.xres		= 800,//·Ö±æÂÊ
+		.xres		= 800,//åˆ†è¾¨ç‡
 		.yres		= 480,
 	},
 	.max_bpp	= 32,
@@ -695,7 +695,7 @@ static struct s3c_fb_platdata smdkv210_lcd0_pdata __initdata = {
 	.win[0]		= &smdkv210_fb_win0,  
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
-	.setup_gpio	= s5pv210_fb_gpio_setup_24bpp,//¹¦ÄÜÒı½ÅÉèÖÃ
+	.setup_gpio	= s5pv210_fb_gpio_setup_24bpp,//åŠŸèƒ½å¼•è„šè®¾ç½®
 };
 
 
@@ -1372,9 +1372,9 @@ static void __init smdkv210_dm9000_init(void)
 	__raw_writel(tmp, S5P_SROM_BW);
 }
 
-//Ìí¼Ói2c°å¼¶ĞÅÏ¢
+//æ·»åŠ i2cæ¿çº§ä¿¡æ¯
 static struct i2c_board_info smdkv210_i2c_devs0[] __initdata = {
-	{ I2C_BOARD_INFO("24c08", 0x50), },     /* 24c08ºÜÖØÒª±ØĞëºÍĞ´µÄÇı¶¯Æ¥Åä */
+	{ I2C_BOARD_INFO("24c08", 0x50), },     /* 24c08å¾ˆé‡è¦å¿…é¡»å’Œå†™çš„é©±åŠ¨åŒ¹é… */
 	{ I2C_BOARD_INFO("wm8580", 0x1b), },
 };
 

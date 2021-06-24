@@ -81,7 +81,7 @@ extern void bus_remove_file(struct bus_type *, struct bus_attribute *);
  */
 struct bus_type {
 	const char		*name;
-	struct bus_attribute	*bus_attrs;				// busµÄÒ»Ğ©ÊôĞÔ
+	struct bus_attribute	*bus_attrs;				// busçš„ä¸€äº›å±æ€§
 	struct device_attribute	*dev_attrs;
 	struct driver_attribute	*drv_attrs;
 
@@ -96,7 +96,7 @@ struct bus_type {
 
 	const struct dev_pm_ops *pm;
 
-	struct subsys_private *p;			//Óë sys ÎÄ¼şÏµÍ³ Ïà¹Ø    	  Clark 19-09-13
+	struct subsys_private *p;			//ä¸ sys æ–‡ä»¶ç³»ç»Ÿ ç›¸å…³    	  Clark 19-09-13
 };
 
 extern int __must_check bus_register(struct bus_type *bus);
@@ -202,7 +202,7 @@ struct device_driver {
 
 	const struct dev_pm_ops *pm;
 
-	struct driver_private *p;			//driverµÄË½ÓĞÊı¾İ,Óëkset,kobjectµÈÏà¹Ø
+	struct driver_private *p;			//driverçš„ç§æœ‰æ•°æ®,ä¸kset,kobjectç­‰ç›¸å…³
 };
 
 
@@ -606,7 +606,7 @@ struct device {
 /* Get the wakeup routines, which depend on struct device */
 #include <linux/pm_wakeup.h>
 
-//ÈçºÎdevµÄinit_name²»´æÔÚ,Ôò·µ»ØkobjectµÄnames By Clark
+//å¦‚ä½•devçš„init_nameä¸å­˜åœ¨,åˆ™è¿”å›kobjectçš„names By Clark
 static inline const char *dev_name(const struct device *dev)
 {
 	/* Use the init name until the kobject becomes available */

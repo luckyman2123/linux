@@ -143,9 +143,9 @@ void ftrace_likely_update(struct ftrace_branch_data *f, int val, int expect);
 #endif /* CONFIG_PROFILE_ALL_BRANCHES */
 
 #else
-// comment by clark :: likely(x)µÈ¼ÛÓÚx£¬¼´if(likely(x))µÈ¼ÛÓÚif(x)£¬µ«ÊÇËü¸æËßgcc£¬xÈ¡1µÄ¿ÉÄÜĞÔ±È½Ï´ó¡£
+// comment by clark :: likely(x)ç­‰ä»·äºxï¼Œå³if(likely(x))ç­‰ä»·äºif(x)ï¼Œä½†æ˜¯å®ƒå‘Šè¯‰gccï¼Œxå–1çš„å¯èƒ½æ€§æ¯”è¾ƒå¤§ã€‚
 # define likely(x)	__builtin_expect(!!(x), 1)	
-// comment by clark :: unlikely(x)µÈ¼ÛÓÚx£¬¼´if(unlikely(x))µÈ¼ÛÓÚif(x)£¬µ«ÊÇËü¸æËßgcc£¬xÈ¡0µÄ¿ÉÄÜĞÔ±È½Ï´ó¡£
+// comment by clark :: unlikely(x)ç­‰ä»·äºxï¼Œå³if(unlikely(x))ç­‰ä»·äºif(x)ï¼Œä½†æ˜¯å®ƒå‘Šè¯‰gccï¼Œxå–0çš„å¯èƒ½æ€§æ¯”è¾ƒå¤§ã€‚
 # define unlikely(x)	__builtin_expect(!!(x), 0)
 #endif
 

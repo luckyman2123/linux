@@ -4,11 +4,11 @@
  */
 
 
-// comment by clark :: asm µÄÂ·¾¶ÊÇ arch/xxx/include/asm
-// comment by clark :: asm-genericµÄÂ·¾¶ÊÇ include/asm-generic
-// comment by clark :: ´úÂëÖĞ°üº¬asm/ÖĞµÄÍ·ÎÄ¼ş£¬Èç¹ûÄ³Ò»¸ö¼Ü¹¹Ã»ÓĞ×Ô¼ºÌØÊâ´úÂëµÄ»°£¬ÆäÖĞ»áÊ¹ÓÃÍ¨ÓÃ°æ±¾µÄÍ·ÎÄ¼ş£¬
-// comment by clark :: ¼´°üº¬ asm-generic/ÀïµÄ¶ÔÓ¦.hÎÄ¼ş¡£
-// comment by clark :: ´úÂëÖĞ²»»áÖ±½Ó°üº¬ asm-generic/ ÀïµÄ.hÎÄ¼ş
+// comment by clark :: asm çš„è·¯å¾„æ˜¯ arch/xxx/include/asm
+// comment by clark :: asm-genericçš„è·¯å¾„æ˜¯ include/asm-generic
+// comment by clark :: ä»£ç ä¸­åŒ…å«asm/ä¸­çš„å¤´æ–‡ä»¶ï¼Œå¦‚æœæŸä¸€ä¸ªæ¶æ„æ²¡æœ‰è‡ªå·±ç‰¹æ®Šä»£ç çš„è¯ï¼Œå…¶ä¸­ä¼šä½¿ç”¨é€šç”¨ç‰ˆæœ¬çš„å¤´æ–‡ä»¶ï¼Œ
+// comment by clark :: å³åŒ…å« asm-generic/é‡Œçš„å¯¹åº”.hæ–‡ä»¶ã€‚
+// comment by clark :: ä»£ç ä¸­ä¸ä¼šç›´æ¥åŒ…å« asm-generic/ é‡Œçš„.hæ–‡ä»¶
 
 #include <asm-generic/vmlinux.lds.h>
 #include <asm/thread_info.h>
@@ -34,8 +34,8 @@
 #define ARM_EXIT_KEEP(x)
 #endif
 
-OUTPUT_ARCH(arm)				/* ÉèÖÃÊä³öÎÄ¼şµÄÌåÏµ¼Ü¹¹ */
-ENTRY(stext)					/* ÉèÖÃstextÈ«¾Ö·ûºÅÎªÈë¿ÚµØÖ· arch/arm/kernel/head.S ÎÄ¼şÖĞ*/
+OUTPUT_ARCH(arm)				/* è®¾ç½®è¾“å‡ºæ–‡ä»¶çš„ä½“ç³»æ¶æ„ */
+ENTRY(stext)					/* è®¾ç½®stextå…¨å±€ç¬¦å·ä¸ºå…¥å£åœ°å€ arch/arm/kernel/head.S æ–‡ä»¶ä¸­*/
 
 #ifndef __ARMEB__
 jiffies = jiffies_64;

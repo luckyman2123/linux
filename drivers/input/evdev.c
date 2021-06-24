@@ -82,14 +82,14 @@ static void evdev_event(struct input_handle *handle,
 
 	client = rcu_dereference(evdev->grab);
 	if (client)
-		evdev_pass_event(client, &event);//·¢ĞÅºÅ
+		evdev_pass_event(client, &event);//å‘ä¿¡å·
 	else
 		list_for_each_entry_rcu(client, &evdev->client_list, node)
 			evdev_pass_event(client, &event);
 
 	rcu_read_unlock();
 
-	wake_up_interruptible(&evdev->wait);//Èç¹û¶Á±»×èÈûÕâÀï»½ĞÑ
+	wake_up_interruptible(&evdev->wait);//å¦‚æœè¯»è¢«é˜»å¡è¿™é‡Œå”¤é†’
 }
 
 static int evdev_fasync(int fd, struct file *file, int on)
@@ -188,7 +188,7 @@ static int evdev_open_device(struct evdev *evdev)
 	if (!evdev->exist)
 		retval = -ENODEV;
 	else if (!evdev->open++) {
-		retval = input_open_device(&evdev->handle);//µÚÒ»´Î´ò¿ª,»á´ò¿ªevdev¶ÔÓ¦µÄhandle
+		retval = input_open_device(&evdev->handle);//ç¬¬ä¸€æ¬¡æ‰“å¼€,ä¼šæ‰“å¼€evdevå¯¹åº”çš„handle
 		if (retval)
 			evdev->open--;
 	}
@@ -246,7 +246,7 @@ static int evdev_open(struct inode *inode, struct file *file)
 {
 	struct evdev *evdev;
 	struct evdev_client *client;
-	int i = iminor(inode) - EVDEV_MINOR_BASE;//»ñµÃÊı×éĞòºÅ
+	int i = iminor(inode) - EVDEV_MINOR_BASE;//è·å¾—æ•°ç»„åºå·
 	int error;
 
 	if (i >= EVDEV_MINORS)
@@ -255,7 +255,7 @@ static int evdev_open(struct inode *inode, struct file *file)
 	error = mutex_lock_interruptible(&evdev_table_mutex);
 	if (error)
 		return error;
-	evdev = evdev_table[i];//È¡³öevdev
+	evdev = evdev_table[i];//å–å‡ºevdev
 	if (evdev)
 		get_device(&evdev->dev);
 	mutex_unlock(&evdev_table_mutex);
@@ -264,7 +264,7 @@ static int evdev_open(struct inode *inode, struct file *file)
 		return -ENODEV;
 
 
-	//ÒÔÏÂ·ÖÅä²¢³õÊ¼»¯Ò»¸öclient
+	//ä»¥ä¸‹åˆ†é…å¹¶åˆå§‹åŒ–ä¸€ä¸ªclient
 	client = kzalloc(sizeof(struct evdev_client), GFP_KERNEL);
 	if (!client) {
 		error = -ENOMEM;
@@ -272,14 +272,14 @@ static int evdev_open(struct inode *inode, struct file *file)
 	}
 
 	spin_lock_init(&client->buffer_lock);
-	client->evdev = evdev;//Ö¸ÏòËüËù±íÊ¾µÄevdev
-	evdev_attach_client(evdev, client);//½«client¹Òµ½evdev->client_list
+	client->evdev = evdev;//æŒ‡å‘å®ƒæ‰€è¡¨ç¤ºçš„evdev
+	evdev_attach_client(evdev, client);//å°†clientæŒ‚åˆ°evdev->client_list
 
-	error = evdev_open_device(evdev);//ÕâÀï»á½«¶ÔÓ¦µÄhandle´ò¿ª
+	error = evdev_open_device(evdev);//è¿™é‡Œä¼šå°†å¯¹åº”çš„handleæ‰“å¼€
 	if (error)
 		goto err_free_client;
 
-	file->private_data = client;//½«clientÉèÖÃÎªfileµÄË½ÓĞÊı¾İ
+	file->private_data = client;//å°†clientè®¾ç½®ä¸ºfileçš„ç§æœ‰æ•°æ®
 	nonseekable_open(inode, file);
 
 	return 0;
@@ -352,13 +352,13 @@ static ssize_t evdev_read(struct file *file, char __user *buffer,
 	struct input_event event;
 	int retval;
 
-	if (count < input_event_size()) //ÅĞ¶Ï»º³åÇø´óĞ¡,ÓĞÊı¾İ¿É¶Á
+	if (count < input_event_size()) //åˆ¤æ–­ç¼“å†²åŒºå¤§å°,æœ‰æ•°æ®å¯è¯»
 		return -EINVAL;
 
 	if (client->head == client->tail && evdev->exist &&
 	    (file->f_flags & O_NONBLOCK))
 		return -EAGAIN;
-	//ÎŞÊı¾İ¿É¶Á,ĞİÃß
+	//æ— æ•°æ®å¯è¯»,ä¼‘çœ 
 	retval = wait_event_interruptible(evdev->wait,
 		client->head != client->tail || !evdev->exist);
 	if (retval)
@@ -796,11 +796,11 @@ static void evdev_cleanup(struct evdev *evdev)
 static int evdev_connect(struct input_handler *handler, struct input_dev *dev,
 			 const struct input_device_id *id)
 {
-	struct evdev *evdev;/*·â×°µÄ¾ßÌåÊäÈëÉè±¸,ËüÓĞÒ»¸öhandle½á¹¹*/
+	struct evdev *evdev;/*å°è£…çš„å…·ä½“è¾“å…¥è®¾å¤‡,å®ƒæœ‰ä¸€ä¸ªhandleç»“æ„*/
 	int minor;
 	int error;
 
-	for (minor = 0; minor < EVDEV_MINORS; minor++) /*±íÊ¾×î¶à32¸öÉè±¸ÎÄ¼ş*/
+	for (minor = 0; minor < EVDEV_MINORS; minor++) /*è¡¨ç¤ºæœ€å¤š32ä¸ªè®¾å¤‡æ–‡ä»¶*/
 		if (!evdev_table[minor])
 			break;
 
@@ -817,32 +817,32 @@ static int evdev_connect(struct input_handler *handler, struct input_dev *dev,
 	spin_lock_init(&evdev->client_lock);
 	mutex_init(&evdev->mutex);
 	init_waitqueue_head(&evdev->wait);
-	//·ÖÅäÒ»¸öevdev½á¹¹,²¢³õÊ¼»¯
+	//åˆ†é…ä¸€ä¸ªevdevç»“æ„,å¹¶åˆå§‹åŒ–
 	dev_set_name(&evdev->dev, "event%d", minor);
 	evdev->exist = 1;
 	evdev->minor = minor;
 
-	evdev->handle.dev = input_get_device(dev);//¸øhandleÀïÃæµÄdev¸³Öµ
+	evdev->handle.dev = input_get_device(dev);//ç»™handleé‡Œé¢çš„devèµ‹å€¼
 	evdev->handle.name = dev_name(&evdev->dev);
-	evdev->handle.handler = handler;//¸øhandleÀïÃæµÄhandler¸³Öµ
+	evdev->handle.handler = handler;//ç»™handleé‡Œé¢çš„handlerèµ‹å€¼
 	evdev->handle.private = evdev;
-	/*ÕâÀïhandle¿É¿´³ÉÊÇhandlerºÍinput devµÄĞÅÏ¢¼¯ºÏÌå,ÓÃÀ´ÁªÏµÆ¥Åä³É¹¦µÄÁ½Õß*/
+	/*è¿™é‡Œhandleå¯çœ‹æˆæ˜¯handlerå’Œinput devçš„ä¿¡æ¯é›†åˆä½“,ç”¨æ¥è”ç³»åŒ¹é…æˆåŠŸçš„ä¸¤è€…*/
 
 	evdev->dev.devt = MKDEV(INPUT_MAJOR, EVDEV_MINOR_BASE + minor);//64+minor
 	evdev->dev.class = &input_class;
 	evdev->dev.parent = &dev->dev;
 	evdev->dev.release = evdev_free;
-	device_initialize(&evdev->dev);//evdev·â×°µÄdeviceµÄ³õÊ¼»¯ ËùÖ¸µÄÀàÔÚsysfsÖĞ/sys/class/inputÏÂÏÔÊ¾
+	device_initialize(&evdev->dev);//evdevå°è£…çš„deviceçš„åˆå§‹åŒ– æ‰€æŒ‡çš„ç±»åœ¨sysfsä¸­/sys/class/inputä¸‹æ˜¾ç¤º
 	
-	error = input_register_handle(&evdev->handle);//×¢²áhandle 
+	error = input_register_handle(&evdev->handle);//æ³¨å†Œhandle 
 	if (error)
 		goto err_free_evdev;
 
-	error = evdev_install_chrdev(evdev);//evdev·Åµ½minor¶ÔÓ¦µÄÊı×éÏîevdev_table[]
+	error = evdev_install_chrdev(evdev);//evdevæ”¾åˆ°minorå¯¹åº”çš„æ•°ç»„é¡¹evdev_table[]
 	if (error)
 		goto err_unregister_handle;
 
-	error = device_add(&evdev->dev);//×¢²áµ½sysfs
+	error = device_add(&evdev->dev);//æ³¨å†Œåˆ°sysfs
 	if (error)
 		goto err_cleanup_evdev;
 
@@ -875,18 +875,18 @@ static const struct input_device_id evdev_ids[] = {
 MODULE_DEVICE_TABLE(input, evdev_ids);
 
 static struct input_handler evdev_handler = {
-	.event		= evdev_event,  //±£´æ¼üÖµ,·¢ĞÅºÅ,»½ĞÑµÈ
-	.connect	= evdev_connect,//Æ¥Åä³É¹¦µ÷ÓÃ,Á¬½Óinput_dev,input_handlerÊµÏÖÊÂ¼şÁ÷Í¨Á´½¨Á¢,ÕâÑùÊÂ¼ş²ÅÄÜ´«µİºÍ´¦Àí
+	.event		= evdev_event,  //ä¿å­˜é”®å€¼,å‘ä¿¡å·,å”¤é†’ç­‰
+	.connect	= evdev_connect,//åŒ¹é…æˆåŠŸè°ƒç”¨,è¿æ¥input_dev,input_handlerå®ç°äº‹ä»¶æµé€šé“¾å»ºç«‹,è¿™æ ·äº‹ä»¶æ‰èƒ½ä¼ é€’å’Œå¤„ç†
 	.disconnect	= evdev_disconnect,
-	.fops		= &evdev_fops,//¶ÔÉè±¸½ÚµãµÄ²Ù×÷»á×ª»»Îªevdev_fops
-	.minor		= EVDEV_MINOR_BASE, //Îª64,Ò»¸öhandler¿É´¦Àí32¸öÉè±¸(13,64)-(13,64+32)
+	.fops		= &evdev_fops,//å¯¹è®¾å¤‡èŠ‚ç‚¹çš„æ“ä½œä¼šè½¬æ¢ä¸ºevdev_fops
+	.minor		= EVDEV_MINOR_BASE, //ä¸º64,ä¸€ä¸ªhandlerå¯å¤„ç†32ä¸ªè®¾å¤‡(13,64)-(13,64+32)
 	.name		= "evdev",
 	.id_table	= evdev_ids,
 };
 
 static int __init evdev_init(void)
 {
-	return input_register_handler(&evdev_handler);//×¢²áÊÂ¼ş´¦ÀíÆ÷
+	return input_register_handler(&evdev_handler);//æ³¨å†Œäº‹ä»¶å¤„ç†å™¨
 }
 
 static void __exit evdev_exit(void)

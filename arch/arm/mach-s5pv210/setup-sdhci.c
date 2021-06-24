@@ -99,9 +99,9 @@ void s5pv210_setup_sdhci3_cfg_gpio(struct platform_device *dev, int width)
 //-------------------------------------
 #if defined(CONFIG_MACH_SMDKV210) || defined(CONFIG_MACH_FS210)
 #define S5PV210_GPH0DAT (S5PV210_GPH0_BASE + 0x04)
-//Ìí¼ÓÄÚÈİ
+//æ·»åŠ å†…å®¹
 #define S5PV210_GPH1DAT (S5PV210_GPH1_BASE + 0x04)
-//Ìí¼ÓÄÚÈİ
+//æ·»åŠ å†…å®¹
 
 static void setup_sdhci0_gpio_wp(void)
 {
@@ -114,7 +114,7 @@ static int sdhci0_get_ro(struct mmc_host *mmc)
 	return !!(readl(S5PV210_GPH0DAT) & 0x80);
 }
 
-//Ìí¼ÓÄÚÈİÉèÖÃÆäÖĞ¶ÏµÄÄÇ¸ö¶Ë¿Ú
+//æ·»åŠ å†…å®¹è®¾ç½®å…¶ä¸­æ–­çš„é‚£ä¸ªç«¯å£
 static void setup_sdhci1_gpio_wp(void)
 {
 	s3c_gpio_cfgpin(S5PV210_GPH1(0), S3C_GPIO_INPUT);
@@ -125,7 +125,7 @@ static int sdhci1_get_ro(struct mmc_host *mmc)
 {
 	return !!(readl(S5PV210_GPH1DAT) & 0x01);
 }
-//Ìí¼ÓÄÚÈİ
+//æ·»åŠ å†…å®¹
 #endif
 
 unsigned int universal_sdhci2_detect_ext_cd(void)
@@ -162,7 +162,7 @@ static struct s3c_sdhci_platdata hsmmc0_platdata = {
 //	.get_ro         = sdhci0_get_ro,
 #endif
 };
-//ĞÂÌí¼ÓÄÚÈİ Ö§³Ösd1½Ó¿Ú
+//æ–°æ·»åŠ å†…å®¹ æ”¯æŒsd1æ¥å£
 static struct s3c_sdhci_platdata hsmmc1_platdata = {
 #if defined(CONFIG_S5PV210_SD_CH1_8BIT)
 	.max_width	= 4,
@@ -173,7 +173,7 @@ static struct s3c_sdhci_platdata hsmmc1_platdata = {
 //	.get_ro         = sdhci1_get_ro,
 #endif
 };
-//ĞÂÌí¼ÓÄÚÈİ Ö§³Ösd1½Ó¿Ú
+//æ–°æ·»åŠ å†…å®¹ æ”¯æŒsd1æ¥å£
 
 #if defined(CONFIG_S3C_DEV_HSMMC2)
 static struct s3c_sdhci_platdata hsmmc2_platdata = {
@@ -193,11 +193,11 @@ void s3c_sdhci_set_platdata(void)
 #if defined(CONFIG_S3C_DEV_HSMMC)
 	s3c_sdhci0_set_platdata(&hsmmc0_platdata);
 #endif
-//ĞÂÌí¼ÓÄÚÈİ Ö§³Ösd1½Ó¿Ú
+//æ–°æ·»åŠ å†…å®¹ æ”¯æŒsd1æ¥å£
 #if defined(CONFIG_S3C_DEV_HSMMC1)
 	s3c_sdhci1_set_platdata(&hsmmc1_platdata);
 #endif
-//ĞÂÌí¼ÓÄÚÈİ Ö§³Ösd1½Ó¿Ú
+//æ–°æ·»åŠ å†…å®¹ æ”¯æŒsd1æ¥å£
 #if defined(CONFIG_S3C_DEV_HSMMC2)
 	if (machine_is_herring()) {
 //		hsmmc2_platdata.ext_cd = IRQ_EINT(28);

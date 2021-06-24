@@ -91,8 +91,8 @@
 #define __gcc_header(x) #x
 #define _gcc_header(x) __gcc_header(linux/compiler-gcc##x.h)
 #define gcc_header(x) _gcc_header(x)
-/* command by clark :: ÕâÊÇÊ²Ã´Ğ´·¨ __GNUC__ ¡¢__GNUC_MINOR__ ¡¢__GNUC_PATCHLEVEL__·Ö±ğ´ú±ígccµÄÖ÷°æ±¾ºÅ£¬´Î°æ±¾ºÅ£¬ĞŞÕı°æ±¾ºÅ */
-/* comment by clark :: ¶àÖØÌæ»» */
+/* command by clark :: è¿™æ˜¯ä»€ä¹ˆå†™æ³• __GNUC__ ã€__GNUC_MINOR__ ã€__GNUC_PATCHLEVEL__åˆ†åˆ«ä»£è¡¨gccçš„ä¸»ç‰ˆæœ¬å·ï¼Œæ¬¡ç‰ˆæœ¬å·ï¼Œä¿®æ­£ç‰ˆæœ¬å· */
+/* comment by clark :: å¤šé‡æ›¿æ¢ */
 /* comment by clark :: https://gcc.gnu.org/onlinedocs/ */
 #include gcc_header(__GNUC__)
 

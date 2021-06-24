@@ -54,10 +54,10 @@ static Cmc623RegisterSet Cmc623_TuneSeq[CMC623_MAX_SETTINGS];
 /*
 static unsigned short cmc6230_normal_i2c[] = { I2C_CLIENT_END };
 static unsigned short cmc6230_ignore[] = { I2C_CLIENT_END };
-static unsigned short cmc6230_probe[] = { 8, (0x38), I2C_CLIENT_END }; // ºÎÆÃ  ¾ÈµÊ P1_LSJ : DE07
+static unsigned short cmc6230_probe[] = { 8, (0x38), I2C_CLIENT_END }; // ä½•æ³¼  æ•‘å‡³ P1_LSJ : DE07
 */
-//static unsigned short cmc6230_probe[] = { 8, (0x70), I2C_CLIENT_END }; // ºÎÆÃ OK 
-//static unsigned short cmc6230_probe[] = { 8, (0x70 >> 1), I2C_CLIENT_END };    // Error ¹ß»ı 
+//static unsigned short cmc6230_probe[] = { 8, (0x70), I2C_CLIENT_END }; // ä½•æ³¼ OK 
+//static unsigned short cmc6230_probe[] = { 8, (0x70 >> 1), I2C_CLIENT_END };    // Error æƒ¯ç§¯ 
 #else 
 static unsigned short cmc6230_normal_i2c[] = {(CMC623_ADDR>>1),I2C_CLIENT_END};
 static unsigned short cmc6230_ignore[] = {1,(CMC623_ADDR>>1),I2C_CLIENT_END};
@@ -448,7 +448,7 @@ static int cmc623_load_data(void)
 	pos = 0;
 	memset(dp, 0, l);
     kloge("== Before vfs_read ======");
-	ret = vfs_read(filp, (char __user *)dp, l, &pos);   // P1_LSJ : DE08 : ¿©±â¼­ Á×À½ 
+	ret = vfs_read(filp, (char __user *)dp, l, &pos);   // P1_LSJ : DE08 : å’¯æ‰è¾‘ ç£·æ¾œ 
     kloge("== After vfs_read ======");
 
 	if(ret != l) 
@@ -523,7 +523,7 @@ int cmc623_test(void)
 	mdelay(5);
 
     // a27  // P1_LSJ DE13
-    // add, value // DNR:bypass, HDTR: bypass Gamma:ÀúÁ¶µµ down 2 ´õ ³·°Ô
+    // add, value // DNR:bypass, HDTR: bypass Gamma:å†ç‚¼æ¡£ down 2 æ­¹ æ’¤éœ¸
     cmc623_I2cWrite16(0x00, 0x0000);    //BANK 0
     cmc623_I2cWrite16(0x01, 0x0040);    //algorithm selection
     cmc623_I2cWrite16(0x24, 0x0001);    

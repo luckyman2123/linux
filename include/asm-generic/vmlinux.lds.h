@@ -82,7 +82,7 @@
 #define DEV_DISCARD(sec) *(.dev##sec)
 #endif
 
-#ifdef CONFIG_HOTPLUG_CPU				// comment by clark :: ¿ÉÔÚÔËĞĞÊ±Ôö¼ÓCPUÊıÄ¿¡£
+#ifdef CONFIG_HOTPLUG_CPU				// comment by clark :: å¯åœ¨è¿è¡Œæ—¶å¢åŠ CPUæ•°ç›®ã€‚
 #define CPU_KEEP(sec)    *(.cpu##sec)
 #define CPU_DISCARD(sec)
 #else

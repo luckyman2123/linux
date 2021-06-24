@@ -62,7 +62,7 @@ static struct i2c_dev *i2c_dev_get_by_minor(unsigned index)
 	struct i2c_dev *i2c_dev;
 
 	spin_lock(&i2c_dev_list_lock);
-	list_for_each_entry(i2c_dev, &i2c_dev_list, list) {//ËÑË÷Á´±í»ñµÃÊÊÅäÆ÷ºÅ
+	list_for_each_entry(i2c_dev, &i2c_dev_list, list) {//æœç´¢é“¾è¡¨è·å¾—é€‚é…å™¨å·
 		if (i2c_dev->adap->nr == index)
 			goto found;
 	}
@@ -88,7 +88,7 @@ static struct i2c_dev *get_free_i2c_dev(struct i2c_adapter *adap)
 	i2c_dev->adap = adap;
 
 	spin_lock(&i2c_dev_list_lock);
-	list_add_tail(&i2c_dev->list, &i2c_dev_list);		//½«i2c dev¼ÓÈëÈ«¾ÖÁ´±í
+	list_add_tail(&i2c_dev->list, &i2c_dev_list);		//å°†i2c devåŠ å…¥å…¨å±€é“¾è¡¨
 	spin_unlock(&i2c_dev_list_lock);
 	return i2c_dev;
 }
@@ -464,19 +464,19 @@ static long i2cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static int i2cdev_open(struct inode *inode, struct file *file)
 {
-	unsigned int minor = iminor(inode);//»ñµÃ´ÎÉè±¸ºÅ
+	unsigned int minor = iminor(inode);//è·å¾—æ¬¡è®¾å¤‡å·
 	struct i2c_client *client;
 	struct i2c_adapter *adap;
 	struct i2c_dev *i2c_dev;
 
-	i2c_dev = i2c_dev_get_by_minor(minor);//ÓÃ´ÎÉè±¸ºÅËÑË÷Á´±í
+	i2c_dev = i2c_dev_get_by_minor(minor);//ç”¨æ¬¡è®¾å¤‡å·æœç´¢é“¾è¡¨
 	if (!i2c_dev)
 		return -ENODEV;
 	
-	adap = i2c_get_adapter(i2c_dev->adap->nr);//ÓÃÊÊÅäÆ÷ºÅ»ñµÃÊÊÅäÆ÷¶ÔÏó
+	adap = i2c_get_adapter(i2c_dev->adap->nr);//ç”¨é€‚é…å™¨å·è·å¾—é€‚é…å™¨å¯¹è±¡
 
 
-	//Í¨¹ıidºÅ»ñµÃÊÊÅäÆ÷Ö¸Õë (ÔÚ°ó¶¨adapterÊ±Çı¶¯°ó¶¨adapter)
+	//é€šè¿‡idå·è·å¾—é€‚é…å™¨æŒ‡é’ˆ (åœ¨ç»‘å®šadapteræ—¶é©±åŠ¨ç»‘å®šadapter)
 	if (!adap)
 		return -ENODEV;
 
@@ -523,14 +523,14 @@ static const struct file_operations i2cdev_fops = {
 
 /* ------------------------------------------------------------------------- */
 
-static struct class *i2c_dev_class;			//sys/classÖĞÓÃµ½
+static struct class *i2c_dev_class;			//sys/classä¸­ç”¨åˆ°
 
 static int i2cdev_attach_adapter(struct device *dev, void *dummy)
 {
 	struct i2c_adapter *adap;
 	struct i2c_dev *i2c_dev;
 	int res;
-	//ÅĞ¶ÏÊÇ·ñÎªÊÊÅäÆ÷ÀàĞÍµÄÉè±¸, ÎªÊ²Ã´ÒªÅĞ¶ÏÊÇ·ñÎª adapterÀàĞÍ£¬ÄÑµÀ»¹ÓĞÆäËüµÄÉè±¸ÀàĞÍ»á¼ÓÈëi2c bus?
+	//åˆ¤æ–­æ˜¯å¦ä¸ºé€‚é…å™¨ç±»å‹çš„è®¾å¤‡, ä¸ºä»€ä¹ˆè¦åˆ¤æ–­æ˜¯å¦ä¸º adapterç±»å‹ï¼Œéš¾é“è¿˜æœ‰å…¶å®ƒçš„è®¾å¤‡ç±»å‹ä¼šåŠ å…¥i2c bus?
 	if (dev->type != &i2c_adapter_type)
 		return 0;
 	adap = to_i2c_adapter(dev);
@@ -541,8 +541,8 @@ static int i2cdev_attach_adapter(struct device *dev, void *dummy)
 
 	/* register this i2c device with the driver core */
 
-	//´´½¨Éè±¸ÎÄ¼ş
-	//µ×²ãÓĞ¶àÉÙ¸öÊÊÅäÆ÷/¿ØÖÆÆ÷¾Í´´½¨¶àÉÙ¸öÉè±¸ÎÄ¼ş
+	//åˆ›å»ºè®¾å¤‡æ–‡ä»¶
+	//åº•å±‚æœ‰å¤šå°‘ä¸ªé€‚é…å™¨/æ§åˆ¶å™¨å°±åˆ›å»ºå¤šå°‘ä¸ªè®¾å¤‡æ–‡ä»¶
 	// /dev/i2c-0,/dev/i2c-1 ...
 	
 	i2c_dev->dev = device_create(i2c_dev_class, &adap->dev,
@@ -617,12 +617,12 @@ static int __init i2c_dev_init(void)
 	int res;
 
 	printk(KERN_INFO "i2c /dev entries driver\n");
-	//·ÖÅäÉè±¸ºÅ,×¢²á²Ù×÷·½·¨
-	//register_chrdev·½·¨ÖĞÒÑ¾­°üº¬ÁËcdevµÄ´´½¨³õÊ¼»¯¼°×¢²á
+	//åˆ†é…è®¾å¤‡å·,æ³¨å†Œæ“ä½œæ–¹æ³•
+	//register_chrdevæ–¹æ³•ä¸­å·²ç»åŒ…å«äº†cdevçš„åˆ›å»ºåˆå§‹åŒ–åŠæ³¨å†Œ
 	res = register_chrdev(I2C_MAJOR, "i2c", &i2cdev_fops);			
 	if (res)
 		goto out;
-	//´´½¨Éè±¸Àà, Éè±¸½ÚµãÊÇÔÚi2cdev_attach_adapterÆ¥Åäº¯ÊıÖĞ½øĞĞ´´½¨µÄ
+	//åˆ›å»ºè®¾å¤‡ç±», è®¾å¤‡èŠ‚ç‚¹æ˜¯åœ¨i2cdev_attach_adapteråŒ¹é…å‡½æ•°ä¸­è¿›è¡Œåˆ›å»ºçš„
 	i2c_dev_class = class_create(THIS_MODULE, "i2c-dev");
 	if (IS_ERR(i2c_dev_class)) {
 		res = PTR_ERR(i2c_dev_class);
@@ -634,8 +634,8 @@ static int __init i2c_dev_init(void)
 	if (res)
 		goto out_unreg_class;
 
-	//°ó¶¨ÒÑ¾­´æÔÚµÄÊÊÅäÆ÷,Æ¥ÅäÊÊÅäÆ÷
-	//Ã¿ËÑË÷Ò»¸öÉè±¸,¶¼»áµ÷ÓÃi2cdev_attach_adapterº¯Êı
+	//ç»‘å®šå·²ç»å­˜åœ¨çš„é€‚é…å™¨,åŒ¹é…é€‚é…å™¨
+	//æ¯æœç´¢ä¸€ä¸ªè®¾å¤‡,éƒ½ä¼šè°ƒç”¨i2cdev_attach_adapterå‡½æ•°
 	/* Bind to already existing adapters right away */
 	i2c_for_each_dev(NULL, i2cdev_attach_adapter);
 

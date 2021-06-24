@@ -68,7 +68,7 @@ below:
 
  sounddefault
 
-	/* comment by clark :: Acron: Ò»¼ÒÓ¢¹úIT¹«Ë¾µÄÃû³Æ, Ó¢¹úµÄÆ»¹û */
+	/* comment by clark :: Acron: ä¸€å®¶è‹±å›½ITå…¬å¸çš„åç§°, è‹±å›½çš„è‹¹æœ */
    Default sound setting on Acorn machines.  May be used differently by
    different architectures.
 
@@ -105,7 +105,7 @@ below:
    Start address in sectors of the ramdisk image on a floppy disk.
 
  system_rev
-	/* ÏµÍ³°æ±¾ĞÅÏ¢ */
+	/* ç³»ç»Ÿç‰ˆæœ¬ä¿¡æ¯ */
    system revision number.
 
  system_serial_low

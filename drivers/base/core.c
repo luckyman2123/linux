@@ -802,7 +802,7 @@ static void device_remove_class_symlinks(struct device *dev)
  * @fmt: format string for the device's name
  */
 
-//×îÖÕµ÷ÓÃkobject_set_name_vargsÀ´ÉèÖÃµ×²ãµÄkobjectµÄÃû×Ö
+//æœ€ç»ˆè°ƒç”¨kobject_set_name_vargsæ¥è®¾ç½®åº•å±‚çš„kobjectçš„åå­—
 int dev_set_name(struct device *dev, const char *fmt, ...)
 {
 	va_list vargs;
@@ -865,7 +865,7 @@ static void device_remove_sys_dev_entry(struct device *dev)
 
 int device_private_init(struct device *dev)
 {
-	dev->p = kzalloc(sizeof(*dev->p), GFP_KERNEL);  //½âÒýÓëÈ¡³ÉÔ±±äÁ¿ÔËËãÖ®¼äµÄÓÅ»¯¼¶sizeof(*(dev->p)) By Clark
+	dev->p = kzalloc(sizeof(*dev->p), GFP_KERNEL);  //è§£å¼•ä¸Žå–æˆå‘˜å˜é‡è¿ç®—ä¹‹é—´çš„ä¼˜åŒ–çº§sizeof(*(dev->p)) By Clark
 	if (!dev->p)
 		return -ENOMEM;
 	dev->p->device = dev;
@@ -875,7 +875,7 @@ int device_private_init(struct device *dev)
 }
 
 /**
- * device_add - add device to device hierarchy.²ã´ÎÌåÏµ
+ * device_add - add device to device hierarchy.å±‚æ¬¡ä½“ç³»
  * @dev: device.
  *
  * This is part 2 of device_register(), though may be called
@@ -895,7 +895,7 @@ int device_add(struct device *dev)
 	struct class_interface *class_intf;
 	int error = -EINVAL;
 
-	dev = get_device(dev);		//Ôö¼ÓdevµÄ¼ÆÊý
+	dev = get_device(dev);		//å¢žåŠ devçš„è®¡æ•°
 	if (!dev)
 		goto done;
 
@@ -922,7 +922,7 @@ int device_add(struct device *dev)
 
 	pr_debug("device: '%s': %s\n", dev_name(dev), __func__);
 
-	parent = get_device(dev->parent);    //Ôö¼Ó¸¸ÒýÓÃ
+	parent = get_device(dev->parent);    //å¢žåŠ çˆ¶å¼•ç”¨
 	setup_parent(dev, parent);
 
 	/* use parent numa_node */
@@ -1057,7 +1057,7 @@ int device_register(struct device *dev)
  * pointer passed in.
  */
 
-// Ôö¼Ó¼ÆÊý, Í¨¹ýkobjÀ´»ñÈ¡µ½dev
+// å¢žåŠ è®¡æ•°, é€šè¿‡kobjæ¥èŽ·å–åˆ°dev
 struct device *get_device(struct device *dev)
 {
 	return dev ? to_dev(kobject_get(&dev->kobj)) : NULL;

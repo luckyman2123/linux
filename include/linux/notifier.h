@@ -48,9 +48,9 @@
  */
 
 struct notifier_block {
-	int (*notifier_call)(struct notifier_block *, unsigned long, void *);   //»Øµ÷·½·¨
+	int (*notifier_call)(struct notifier_block *, unsigned long, void *);   //å›žè°ƒæ–¹æ³•
 	struct notifier_block __rcu *next;
-	int priority;					//ÓÅ»¯¼¶
+	int priority;					//ä¼˜åŒ–çº§
 };
 
 struct atomic_notifier_head {
