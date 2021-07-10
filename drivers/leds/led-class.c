@@ -46,8 +46,7 @@ static ssize_t brightness_store(struct device *dev,
 	if (ret)
 		return ret;
 
-	if (state == LED_OFF)
-		led_trigger_remove(led_cdev);
+	led_cdev->usr_brightness_req = state;
 	__led_set_brightness(led_cdev, state);
 
 	return size;
@@ -61,7 +60,24 @@ static ssize_t max_brightness_show(struct device *dev,
 
 	return sprintf(buf, "%u\n", led_cdev->max_brightness);
 }
-static DEVICE_ATTR_RO(max_brightness);
+
+static ssize_t max_brightness_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	unsigned long state;
+	ssize_t ret = -EINVAL;
+
+	ret = kstrtoul(buf, 10, &state);
+	if (ret)
+		return ret;
+
+	led_cdev->max_brightness = state;
+	led_set_brightness(led_cdev, led_cdev->usr_brightness_req);
+
+	return size;
+}
+static DEVICE_ATTR_RW(max_brightness);
 
 #ifdef CONFIG_LEDS_TRIGGERS
 static DEVICE_ATTR(trigger, 0644, led_trigger_show, led_trigger_store);
@@ -173,6 +189,7 @@ void led_classdev_resume(struct led_classdev *led_cdev)
 }
 EXPORT_SYMBOL_GPL(led_classdev_resume);
 
+#ifdef CONFIG_PM_SLEEP
 static int led_suspend(struct device *dev)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
@@ -192,11 +209,9 @@ static int led_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
-static const struct dev_pm_ops leds_class_dev_pm_ops = {
-	.suspend        = led_suspend,
-	.resume         = led_resume,
-};
+static SIMPLE_DEV_PM_OPS(leds_class_dev_pm_ops, led_suspend, led_resume);
 
 /**
  * led_classdev_register - register a new object of led_classdev class.

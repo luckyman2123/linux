@@ -1,0 +1,11 @@
+config PRJ_SLM750T
+  bool
+  default y
+config NAU8810_CODEC
+  bool
+  default y
+#add codec es8311 by zhouxinghua 20210527
+config ES8311_CODEC
+  bool
+  default y
+#add end

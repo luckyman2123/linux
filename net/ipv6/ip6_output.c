@@ -555,7 +555,8 @@ int ip6_fragment(struct sk_buff *skb, int (*output)(struct sk_buff *))
 {
 	struct sk_buff *frag;
 	struct rt6_info *rt = (struct rt6_info *)skb_dst(skb);
-	struct ipv6_pinfo *np = skb->sk ? inet6_sk(skb->sk) : NULL;
+	struct ipv6_pinfo *np = skb->sk && !dev_recursion_level() ?
+				inet6_sk(skb->sk) : NULL;
 	struct ipv6hdr *tmp_hdr;
 	struct frag_hdr *fh;
 	unsigned int mtu, hlen, left, len;
@@ -1296,7 +1297,8 @@ emsgsize:
 	if (((length > mtu) ||
 	     (skb && skb_is_gso(skb))) &&
 	    (sk->sk_protocol == IPPROTO_UDP) &&
-	    (rt->dst.dev->features & NETIF_F_UFO)) {
+	    (rt->dst.dev->features & NETIF_F_UFO) &&
+	    (sk->sk_type == SOCK_DGRAM)) {
 		err = ip6_ufo_append_data(sk, getfrag, from, length,
 					  hh_len, fragheaderlen,
 					  transhdrlen, mtu, flags, rt);
@@ -1388,8 +1390,20 @@ alloc_new_skb:
 			 *	Fill in the control structures
 			 */
 			skb->protocol = htons(ETH_P_IPV6);
-			skb->ip_summed = CHECKSUM_NONE;
-			skb->csum = 0;
+
+			/* offload UDP checksum in case the packet is not
+			 * a fragment (length <= mtu && transhdrlen) and the
+			 * device supports it in its features.
+			 */
+			if ((rt->dst.dev->features &
+				NETIF_F_IPV6_UDP_CSUM) &&
+				(length <= mtu) && transhdrlen &&
+				(sk->sk_protocol == IPPROTO_UDP)) {
+				skb->ip_summed = CHECKSUM_PARTIAL;
+			} else {
+				skb->ip_summed = CHECKSUM_NONE;
+				skb->csum = 0;
+			}
 			/* reserve for fragmentation and ipsec header */
 			skb_reserve(skb, hh_len + sizeof(struct frag_hdr) +
 				    dst_exthdrlen);

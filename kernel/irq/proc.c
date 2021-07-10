@@ -15,6 +15,23 @@
 
 #include "internals.h"
 
+/*
+ * Access rules:
+ *
+ * procfs protects read/write of /proc/irq/N/ files against a
+ * concurrent free of the interrupt descriptor. remove_proc_entry()
+ * immediately prevents new read/writes to happen and waits for
+ * already running read/write functions to complete.
+ *
+ * We remove the proc entries first and then delete the interrupt
+ * descriptor from the radix tree and free it. So it is guaranteed
+ * that irq_to_desc(N) is valid as long as the read/writes are
+ * permitted by procfs.
+ *
+ * The read from /proc/interrupts is a different problem because there
+ * is no protection. So the lookup and the access to irqdesc
+ * information must be protected by sparse_irq_lock.
+ */
 static struct proc_dir_entry *root_irq_dir;
 
 #ifdef CONFIG_SMP
@@ -266,6 +283,45 @@ static const struct file_operations irq_spurious_proc_fops = {
 	.release	= single_release,
 };
 
+static int irq_wake_depth_proc_show(struct seq_file *m, void *v)
+{
+	struct irq_desc *desc = irq_to_desc((long) m->private);
+
+	seq_printf(m, "wake_depth %u\n", desc->wake_depth);
+	return 0;
+}
+
+static int irq_wake_depth_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, irq_wake_depth_proc_show, PDE_DATA(inode));
+}
+
+static const struct file_operations irq_wake_depth_proc_fops = {
+	.open		= irq_wake_depth_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int irq_disable_depth_proc_show(struct seq_file *m, void *v)
+{
+	struct irq_desc *desc = irq_to_desc((long) m->private);
+
+	seq_printf(m, "disable_depth %u\n", desc->depth);
+	return 0;
+}
+
+static int irq_disable_depth_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, irq_disable_depth_proc_show, PDE_DATA(inode));
+}
+
+static const struct file_operations irq_disable_depth_proc_fops = {
+	.open		= irq_disable_depth_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 #define MAX_NAMELEN 128
 
 static int name_unique(unsigned int irq, struct irqaction *new_action)
@@ -341,6 +397,10 @@ void register_irq_proc(unsigned int irq, struct irq_desc *desc)
 
 	proc_create_data("spurious", 0444, desc->dir,
 			 &irq_spurious_proc_fops, (void *)(long)irq);
+	proc_create_data("disable_depth", 0444, desc->dir,
+			 &irq_disable_depth_proc_fops, (void *)(long)irq);
+	proc_create_data("wake_depth", 0444, desc->dir,
+			 &irq_wake_depth_proc_fops, (void *)(long)irq);
 }
 
 void unregister_irq_proc(unsigned int irq, struct irq_desc *desc)
@@ -437,9 +497,10 @@ int show_interrupts(struct seq_file *p, void *v)
 		seq_putc(p, '\n');
 	}
 
+	irq_lock_sparse();
 	desc = irq_to_desc(i);
 	if (!desc)
-		return 0;
+		goto outsparse;
 
 	raw_spin_lock_irqsave(&desc->lock, flags);
 	for_each_online_cpu(j)
@@ -479,6 +540,8 @@ int show_interrupts(struct seq_file *p, void *v)
 	seq_putc(p, '\n');
 out:
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
+outsparse:
+	irq_unlock_sparse();
 	return 0;
 }
 #endif

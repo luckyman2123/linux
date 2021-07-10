@@ -1,0 +1,14 @@
+config WAKEUP_REPORT
+	tristate "Make the system into sleep or wake up"
+	default y
+	help
+		Implements a extended function about power manager , a gpio trigger
+		the cpu into sleep or wake up.this function must depends on GPIO_USB_DETECT configed.
+		it interface to "\kernel\drivers\platform\msm\gpio-usbdetect.c" module.
+
+config WAKEUP_OUT
+	tristate "Goto High when module wakeup"
+	default n
+	help
+	  Implements a indication function about power manager , a gpio output high
+	  when module wakeup or low with module sleep.

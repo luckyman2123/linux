@@ -1177,6 +1177,89 @@ void *mtd_kmalloc_up_to(const struct mtd_info *mtd, size_t *size)
 }
 EXPORT_SYMBOL_GPL(mtd_kmalloc_up_to);
 
+/*yaotong 20170118 start*/
+/*
+* erase mtd partition
+*/
+int mtd_erase_partition(struct mtd_info *mtd)
+{
+  int err;
+  struct erase_info ei;
+  //struct mtd_part *part;
+  uint64_t offs = 0;
+  
+  //part = PART(mtd);
+  //printk("partition offset is 0x%x\n", part->offset);
+  while(offs < mtd->size)
+  {
+  /*first check whether block is bad*/
+	err = mtd_block_isbad(mtd, offs);
+	if(err)
+	{
+	    pr_info("block %d is bad\n", offs);
+		offs += mtd->erasesize;
+		continue;
+	}
+ /*second erase good block*/
+	memset(&ei, 0, sizeof(struct erase_info));
+	ei.mtd  = mtd;
+	ei.addr = offs;
+	ei.len  = mtd->erasesize;
+
+	err = mtd_erase(mtd, &ei);
+	if (err) {
+		pr_info("error %d while erasing EB 0x%x\n", err, offs);
+		return err;
+	}
+
+	if (ei.state == MTD_ERASE_FAILED) {
+		pr_info("some erase error occurred at EB 0x%x\n", offs);
+		return -EIO;
+	}
+	offs += mtd->erasesize;
+  } 
+  return 0;  
+}
+
+int mtd_partition_read(struct mtd_info *mtd, loff_t addr, size_t size, void *buf)
+{
+	size_t read;
+	int err;
+
+	err = mtd_read(mtd, addr, size, &read, buf);
+	/* Ignore corrected ECC errors */
+	if (mtd_is_bitflip(err))
+		err = 0;
+	if (!err && read != size)
+		err = -EIO;
+	if (err)
+		pr_err("error: read failed at %#llx\n", addr);
+
+	return err;
+}
+
+int mtd_partition_write(struct mtd_info *mtd, loff_t addr, size_t size,
+		const void *buf)
+{
+	size_t written;
+	int err;
+
+	err = mtd_write(mtd, addr, size, &written, buf);
+	if (!err && written != size)
+		err = -EIO;
+	if (err)
+		pr_err("error: write failed at %#llx\n", addr);
+
+	return err;
+}
+EXPORT_SYMBOL_GPL(mtd_erase_partition);
+EXPORT_SYMBOL_GPL(mtd_partition_read);
+EXPORT_SYMBOL_GPL(mtd_partition_write);
+/*yaotong 20170118 end*/
+
+
+
+
 #ifdef CONFIG_PROC_FS
 
 /*====================================================================*/

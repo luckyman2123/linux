@@ -17,6 +17,7 @@
 #include <linux/list.h>
 #include <linux/rbtree.h>
 #include <linux/slab.h>
+#include <linux/prj_macro_ctrl.h> // Added by lishihong for BugID 0000 on 2018-08-28
 
 #include "power.h"
 
@@ -80,7 +81,13 @@ static inline void decrement_wakelocks_number(void) {}
 #endif /* CONFIG_PM_WAKELOCKS_LIMIT */
 
 #ifdef CONFIG_PM_WAKELOCKS_GC
+// Begin: Added by lishihong for BugID 0000 on 2018-08-28
+#ifdef PROJECT_OPEN_CPU
+#define WL_GC_COUNT_MAX	(512)
+#else
 #define WL_GC_COUNT_MAX	100
+#endif
+// End: Added by lishihong for BugID 0000 on 2018-08-28
 #define WL_GC_TIME_SEC	300
 
 static LIST_HEAD(wakelocks_lru_list);

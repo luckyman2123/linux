@@ -113,6 +113,18 @@ snd-soc-twl4030-objs := twl4030.o
 snd-soc-twl6040-objs := twl6040.o
 snd-soc-uda134x-objs := uda134x.o
 snd-soc-uda1380-objs := uda1380.o
+snd-soc-wcd9320-objs := wcd9320.o wcd9320-tables.o
+snd-soc-wcd9330-objs := wcd9330.o wcd9330-tables.o
+snd-soc-wcd9335-objs := wcd9335.o
+snd-soc-wcd9xxx-objs := wcd9xxx-resmgr.o wcd9xxx-mbhc.o wcd9xxx-common.o wcdcal-hwdep.o
+snd-soc-wcd9xxx-v2-objs := wcd9xxx-common-v2.o wcd9xxx-resmgr-v2.o
+audio-ext-clock-objs := audio-ext-clk.o
+snd-soc-wcd-cpe-objs := wcd_cpe_services.o wcd_cpe_core.o
+snd-soc-wsa881x-objs := wsa881x.o wsa881x-tables.o wsa881x-regmap.o wsa881x-temp-sensor.o
+snd-soc-wcd-mbhc-objs := wcd-mbhc-v2.o
+snd-soc-msm8952-wcd-objs := msm8x16-wcd.o msm8x16-wcd-tables.o
+snd-soc-wsa881x-analog-objs := wsa881x-analog.o wsa881x-tables-analog.o
+snd-soc-wsa881x-analog-objs += wsa881x-regmap-analog.o wsa881x-irq.o
 snd-soc-wl1273-objs := wl1273.o
 snd-soc-wm-adsp-objs := wm_adsp.o
 snd-soc-wm0010-objs := wm0010.o
@@ -166,6 +178,10 @@ snd-soc-wm9705-objs := wm9705.o
 snd-soc-wm9712-objs := wm9712.o
 snd-soc-wm9713-objs := wm9713.o
 snd-soc-wm-hubs-objs := wm_hubs.o
+
+snd-soc-msm-stub-objs := msm_stub.o
+obj-$(CONFIG_SND_SOC_MSM_HDMI_CODEC_RX) := msm_hdmi_codec_rx.o
+obj-$(CONFIG_SND_SOC_MSM_HDMI_DBA_CODEC_RX) := msm_hdmi_dba_codec_rx.o
 
 # Amp
 snd-soc-max9877-objs := max9877.o
@@ -286,6 +302,17 @@ obj-$(CONFIG_SND_SOC_TWL4030)	+= snd-soc-twl4030.o
 obj-$(CONFIG_SND_SOC_TWL6040)	+= snd-soc-twl6040.o
 obj-$(CONFIG_SND_SOC_UDA134X)	+= snd-soc-uda134x.o
 obj-$(CONFIG_SND_SOC_UDA1380)	+= snd-soc-uda1380.o
+obj-$(CONFIG_SND_SOC_WCD9320)	+= snd-soc-wcd9320.o
+obj-$(CONFIG_SND_SOC_WCD9330)	+= snd-soc-wcd9330.o
+obj-$(CONFIG_SND_SOC_WCD9335)	+= snd-soc-wcd9335.o
+obj-$(CONFIG_AUDIO_EXT_CLK)	+= audio-ext-clock.o
+obj-$(CONFIG_SND_SOC_WCD9XXX)   += snd-soc-wcd9xxx.o
+obj-$(CONFIG_SND_SOC_WCD9XXX_V2) += snd-soc-wcd9xxx-v2.o
+obj-$(CONFIG_SND_SOC_MSM8X16_WCD)	+= snd-soc-msm8952-wcd.o msm8916-wcd-irq.o
+obj-$(CONFIG_SND_SOC_WCD_CPE)   += snd-soc-wcd-cpe.o
+obj-$(CONFIG_SND_SOC_WCD_MBHC)  += snd-soc-wcd-mbhc.o
+obj-$(CONFIG_SND_SOC_WSA881X)	+= snd-soc-wsa881x.o
+obj-$(CONFIG_SND_SOC_WSA881X_ANALOG)	+= snd-soc-wsa881x-analog.o
 obj-$(CONFIG_SND_SOC_WL1273)	+= snd-soc-wl1273.o
 obj-$(CONFIG_SND_SOC_WM0010)	+= snd-soc-wm0010.o
 obj-$(CONFIG_SND_SOC_WM1250_EV1) += snd-soc-wm1250-ev1.o
@@ -339,7 +366,19 @@ obj-$(CONFIG_SND_SOC_WM9712)	+= snd-soc-wm9712.o
 obj-$(CONFIG_SND_SOC_WM9713)	+= snd-soc-wm9713.o
 obj-$(CONFIG_SND_SOC_WM_ADSP)	+= snd-soc-wm-adsp.o
 obj-$(CONFIG_SND_SOC_WM_HUBS)	+= snd-soc-wm-hubs.o
+obj-$(CONFIG_SND_SOC_MSM_STUB)  += snd-soc-msm-stub.o
 
 # Amp
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
 obj-$(CONFIG_SND_SOC_TPA6130A2)	+= snd-soc-tpa6130a2.o
+
+#<!---[BUGID]21675 modify codec for SLM750T/V lihongbin@20181206
+snd-soc-nau8810-objs := nau8810.o
+obj-$(CONFIG_SND_SOC_NAU8810)	+= snd-soc-nau8810.o
+#snd-soc-rt5616-objs := rt5616.o
+#obj-$(CONFIG_SND_SOC_RT5616)	+= snd-soc-rt5616.o
+#--->end
+#add codec es8311 by zhouxinghua 20210527
+snd-soc-es8311-objs := es8311.o
+obj-$(CONFIG_SND_SOC_ES8311)   += snd-soc-es8311.o
+#add end

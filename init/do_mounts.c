@@ -34,6 +34,9 @@
 #include <linux/nfs_mount.h>
 
 #include "do_mounts.h"
+/*yaotong 20170120 start*/
+#include <linux/mtd/mtd.h>
+/*yaotong 20170120 end*/
 
 int __initdata rd_doload;	/* 1 = load RAM disk, 0 = don't load */
 
@@ -381,6 +384,7 @@ void __init mount_block_root(char *name, int flags)
 					__GFP_NOTRACK_FALSE_POSITIVE);
 	char *fs_names = page_address(page);
 	char *p;
+
 #ifdef CONFIG_BLOCK
 	char b[BDEVNAME_SIZE];
 #else
@@ -417,7 +421,10 @@ retry:
 		printk("DEBUG_BLOCK_EXT_DEVT is enabled, you need to specify "
 		       "explicit textual name for \"root=\" boot option.\n");
 #endif
-		panic("VFS: Unable to mount root fs on %s", b);
+/*yaotong modified 20170408 start*/
+    //change_flag_scrub();
+/*yaotong modified 20170408 end*/
+	panic("VFS: Unable to mount root fs on %s", b);
 	}
 
 	printk("List of all partitions:\n");
@@ -429,6 +436,9 @@ retry:
 #ifdef CONFIG_BLOCK
 	__bdevname(ROOT_DEV, b);
 #endif
+/*yaotong modified 20170408 start*/
+    //change_flag_scrub();
+/*yaotong modified 20170408 end*/
 	panic("VFS: Unable to mount root fs on %s", b);
 out:
 	put_page(page);

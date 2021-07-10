@@ -315,6 +315,7 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	switch (cmd) {
 	case LINUX_REBOOT_CMD_RESTART:
 		kernel_restart(NULL);
+
 		break;
 
 	case LINUX_REBOOT_CMD_CAD_ON:

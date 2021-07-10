@@ -582,7 +582,7 @@ static inline int pmd_large(pmd_t pmd)
 	return (pmd_val(pmd) & _SEGMENT_ENTRY_LARGE) != 0;
 }
 
-static inline int pmd_pfn(pmd_t pmd)
+static inline unsigned long pmd_pfn(pmd_t pmd)
 {
 	unsigned long origin_mask;
 
@@ -1747,6 +1747,10 @@ extern int vmem_add_mapping(unsigned long start, unsigned long size);
 extern int vmem_remove_mapping(unsigned long start, unsigned long size);
 extern int s390_enable_sie(void);
 extern void s390_enable_skey(void);
+
+/* s390 has a private copy of get unmapped area to deal with cache synonyms */
+#define HAVE_ARCH_UNMAPPED_AREA
+#define HAVE_ARCH_UNMAPPED_AREA_TOPDOWN
 
 /*
  * No page table caches to initialise

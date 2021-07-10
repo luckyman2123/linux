@@ -1,7 +1,6 @@
 #ifndef _UAPI__LINUX_NETLINK_H
 #define _UAPI__LINUX_NETLINK_H
 
-#include <linux/kernel.h>
 #include <linux/socket.h> /* for __kernel_sa_family_t */
 #include <linux/types.h>
 
@@ -27,8 +26,14 @@
 #define NETLINK_ECRYPTFS	19
 #define NETLINK_RDMA		20
 #define NETLINK_CRYPTO		21	/* Crypto layer */
-
+#define NETLINK_SOCKEV		22	/* Socket Administrative Events */
 #define NETLINK_INET_DIAG	NETLINK_SOCK_DIAG
+
+#define NETLINK_ODM_MSG     23   /*Forge ODM message*/
+#define NETLINK_NFC			24   /*Forge NFC message*/
+#define NETLINK_NFC2		25   /*Forge NFC message*/
+#define NETLINK_MG			26   /*Forge MG message*/
+#define NETLINK_MG2			27   /*Forge MG message*/
 
 #define MAX_LINKS 32		
 

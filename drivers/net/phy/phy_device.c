@@ -310,6 +310,8 @@ static int get_phy_id(struct mii_bus *bus, int addr, u32 *phy_id,
 
 	*phy_id |= (phy_reg & 0xffff);
 
+	printk("[meig]switch phy_id: 0x%x phy_addr: %d\n", *phy_id, addr);
+
 	return 0;
 }
 
@@ -782,9 +784,10 @@ static int genphy_config_advert(struct phy_device *phydev)
 	if (phydev->supported & (SUPPORTED_1000baseT_Half |
 				 SUPPORTED_1000baseT_Full)) {
 		adv |= ethtool_adv_to_mii_ctrl1000_t(advertise);
-		if (adv != oldadv)
-			changed = 1;
 	}
+
+	if (adv != oldadv)
+		changed = 1;
 
 	err = phy_write(phydev, MII_CTRL1000, adv);
 	if (err < 0)

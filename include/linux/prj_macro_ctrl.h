@@ -1,0 +1,2 @@
+#define PRJ_SLM750T 1
+#define PROJECT_OPEN_CPU 1

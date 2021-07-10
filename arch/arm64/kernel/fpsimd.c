@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/cpu.h>
 #include <linux/cpu_pm.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -87,14 +88,23 @@
  *   whatever is in the FPSIMD registers is not saved to memory, but discarded.
  */
 static DEFINE_PER_CPU(struct fpsimd_state *, fpsimd_last_state);
+static DEFINE_PER_CPU(int, fpsimd_stg_enable);
 
 /*
  * Trapped FP/ASIMD access.
  */
 void do_fpsimd_acc(unsigned int esr, struct pt_regs *regs)
 {
-	/* TODO: implement lazy context saving/restoring */
-	WARN_ON(1);
+	fpsimd_disable_trap();
+	fpsimd_settings_disable();
+	this_cpu_write(fpsimd_stg_enable, 0);
+}
+
+void do_fpsimd_acc_compat(unsigned int esr, struct pt_regs *regs)
+{
+	fpsimd_disable_trap();
+	fpsimd_settings_enable();
+	this_cpu_write(fpsimd_stg_enable, 1);
 }
 
 /*
@@ -134,6 +144,11 @@ void fpsimd_thread_switch(struct task_struct *next)
 	if (current->mm && !test_thread_flag(TIF_FOREIGN_FPSTATE))
 		fpsimd_save_state(&current->thread.fpsimd_state);
 
+	if (__this_cpu_read(fpsimd_stg_enable)) {
+		fpsimd_settings_disable();
+		this_cpu_write(fpsimd_stg_enable, 0);
+	}
+
 	if (next->mm) {
 		/*
 		 * If we are switching to a task whose most recent userland
@@ -151,6 +166,11 @@ void fpsimd_thread_switch(struct task_struct *next)
 		else
 			set_ti_thread_flag(task_thread_info(next),
 					   TIF_FOREIGN_FPSTATE);
+
+		if (test_ti_thread_flag(task_thread_info(next), TIF_32BIT))
+			fpsimd_enable_trap();
+		else
+			fpsimd_disable_trap();
 	}
 }
 
@@ -296,6 +316,35 @@ static void fpsimd_pm_init(void)
 static inline void fpsimd_pm_init(void) { }
 #endif /* CONFIG_CPU_PM */
 
+#ifdef CONFIG_HOTPLUG_CPU
+static int fpsimd_cpu_hotplug_notifier(struct notifier_block *nfb,
+				       unsigned long action,
+				       void *hcpu)
+{
+	unsigned int cpu = (long)hcpu;
+
+	switch (action) {
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
+		per_cpu(fpsimd_last_state, cpu) = NULL;
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block fpsimd_cpu_hotplug_notifier_block = {
+	.notifier_call = fpsimd_cpu_hotplug_notifier,
+};
+
+static inline void fpsimd_hotplug_init(void)
+{
+	register_cpu_notifier(&fpsimd_cpu_hotplug_notifier_block);
+}
+
+#else
+static inline void fpsimd_hotplug_init(void) { }
+#endif
+
 /*
  * FP/SIMD support code initialisation.
  */
@@ -315,6 +364,7 @@ static int __init fpsimd_init(void)
 		elf_hwcap |= HWCAP_ASIMD;
 
 	fpsimd_pm_init();
+	fpsimd_hotplug_init();
 
 	return 0;
 }

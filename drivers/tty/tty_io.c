@@ -113,12 +113,12 @@
 struct ktermios tty_std_termios = {	/* for the benefit of tty drivers  */
 	.c_iflag = ICRNL | IXON,
 	.c_oflag = OPOST | ONLCR,
-	.c_cflag = B38400 | CS8 | CREAD | HUPCL,
+	.c_cflag = B115200 | CS8 | CREAD | HUPCL,//B38400->B115200-yll20160801
 	.c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK |
 		   ECHOCTL | ECHOKE | IEXTEN,
 	.c_cc = INIT_C_CC,
-	.c_ispeed = 38400,
-	.c_ospeed = 38400
+	.c_ispeed = 115200,//38400->115200-yll20160801
+	.c_ospeed = 115200//38400->115200-yll20160801
 };
 
 EXPORT_SYMBOL(tty_std_termios);
@@ -975,8 +975,8 @@ EXPORT_SYMBOL(start_tty);
 /* We limit tty time update visibility to every 8 seconds or so. */
 static void tty_update_time(struct timespec *time)
 {
-	unsigned long sec = get_seconds() & ~7;
-	if ((long)(sec - time->tv_sec) > 0)
+	unsigned long sec = get_seconds();
+	if (abs(sec - time->tv_sec) & ~7)
 		time->tv_sec = sec;
 }
 

@@ -15,6 +15,7 @@
 #include <linux/mm.h>
 #include <linux/smp.h>
 #include <linux/percpu.h>
+#include <linux/msm_rtb.h>
 
 #include <asm/mmu_context.h>
 #include <asm/smp_plat.h>
@@ -120,6 +121,7 @@ static int contextidr_notifier(struct notifier_block *unused, unsigned long cmd,
 	"	mcr	p15, 0, %0, c13, c0, 1\n"
 	: "=r" (contextidr), "+r" (pid)
 	: "I" (~ASID_MASK));
+	uncached_logk(LOGK_CTXID, (void *)contextidr);
 	isb();
 
 	return NOTIFY_OK;
@@ -144,21 +146,17 @@ static void flush_context(unsigned int cpu)
 	/* Update the list of reserved ASIDs and the ASID bitmap. */
 	bitmap_clear(asid_map, 0, NUM_USER_ASIDS);
 	for_each_possible_cpu(i) {
-		if (i == cpu) {
-			asid = 0;
-		} else {
-			asid = atomic64_xchg(&per_cpu(active_asids, i), 0);
-			/*
-			 * If this CPU has already been through a
-			 * rollover, but hasn't run another task in
-			 * the meantime, we must preserve its reserved
-			 * ASID, as this is the only trace we have of
-			 * the process it is still running.
-			 */
-			if (asid == 0)
-				asid = per_cpu(reserved_asids, i);
-			__set_bit(asid & ~ASID_MASK, asid_map);
-		}
+		asid = atomic64_xchg(&per_cpu(active_asids, i), 0);
+		/*
+		 * If this CPU has already been through a
+		 * rollover, but hasn't run another task in
+		 * the meantime, we must preserve its reserved
+		 * ASID, as this is the only trace we have of
+		 * the process it is still running.
+		 */
+		if (asid == 0)
+			asid = per_cpu(reserved_asids, i);
+		__set_bit(asid & ~ASID_MASK, asid_map);
 		per_cpu(reserved_asids, i) = asid;
 	}
 

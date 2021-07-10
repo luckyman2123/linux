@@ -379,6 +379,7 @@ extern bool pm_get_wakeup_count(unsigned int *count, bool block);
 extern bool pm_save_wakeup_count(unsigned int count);
 extern void pm_wakep_autosleep_enabled(bool set);
 extern void pm_print_active_wakeup_sources(void);
+extern void pm_get_active_wakeup_sources(char *pending_sources, size_t max);
 
 static inline void lock_system_sleep(void)
 {
@@ -441,6 +442,10 @@ extern bool pm_print_times_enabled;
 /* kernel/power/autosleep.c */
 void queue_up_suspend_work(void);
 
+//add by liangdi for test 20201207
+suspend_state_t pm_autosleep_state(void);
+int pm_autosleep_set_state(suspend_state_t state);
+//add end
 #else /* !CONFIG_PM_AUTOSLEEP */
 
 static inline void queue_up_suspend_work(void) {}

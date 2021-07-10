@@ -213,7 +213,7 @@ int regcache_read(struct regmap *map,
 		ret = map->cache_ops->read(map, reg, value);
 
 		if (ret == 0)
-			trace_regmap_reg_read_cache(map->dev, reg, *value);
+			trace_regmap_reg_read_cache(map, reg, *value);
 
 		return ret;
 	}
@@ -306,7 +306,7 @@ int regcache_sync(struct regmap *map)
 	dev_dbg(map->dev, "Syncing %s cache\n",
 		map->cache_ops->name);
 	name = map->cache_ops->name;
-	trace_regcache_sync(map->dev, name, "start");
+	trace_regcache_sync(map, name, "start");
 
 	if (!map->cache_dirty)
 		goto out;
@@ -341,7 +341,7 @@ out:
 
 	regmap_async_complete(map);
 
-	trace_regcache_sync(map->dev, name, "stop");
+	trace_regcache_sync(map, name, "stop");
 
 	return ret;
 }
@@ -376,7 +376,7 @@ int regcache_sync_region(struct regmap *map, unsigned int min,
 	name = map->cache_ops->name;
 	dev_dbg(map->dev, "Syncing %s cache from %d-%d\n", name, min, max);
 
-	trace_regcache_sync(map->dev, name, "start region");
+	trace_regcache_sync(map, name, "start region");
 
 	if (!map->cache_dirty)
 		goto out;
@@ -396,7 +396,7 @@ out:
 
 	regmap_async_complete(map);
 
-	trace_regcache_sync(map->dev, name, "stop region");
+	trace_regcache_sync(map, name, "stop region");
 
 	return ret;
 }
@@ -423,7 +423,7 @@ int regcache_drop_region(struct regmap *map, unsigned int min,
 
 	map->lock(map->lock_arg);
 
-	trace_regcache_drop_region(map->dev, min, max);
+	trace_regcache_drop_region(map, min, max);
 
 	ret = map->cache_ops->drop(map, min, max);
 
@@ -450,7 +450,7 @@ void regcache_cache_only(struct regmap *map, bool enable)
 	map->lock(map->lock_arg);
 	WARN_ON(map->cache_bypass && enable);
 	map->cache_only = enable;
-	trace_regmap_cache_only(map->dev, enable);
+	trace_regmap_cache_only(map, enable);
 	map->unlock(map->lock_arg);
 }
 EXPORT_SYMBOL_GPL(regcache_cache_only);
@@ -488,7 +488,7 @@ void regcache_cache_bypass(struct regmap *map, bool enable)
 	map->lock(map->lock_arg);
 	WARN_ON(map->cache_only && enable);
 	map->cache_bypass = enable;
-	trace_regmap_cache_bypass(map->dev, enable);
+	trace_regmap_cache_bypass(map, enable);
 	map->unlock(map->lock_arg);
 }
 EXPORT_SYMBOL_GPL(regcache_cache_bypass);
@@ -658,6 +658,52 @@ static int regcache_sync_block_raw_flush(struct regmap *map, const void **data,
 	return ret;
 }
 
+static int regcache_sync_block_raw_multi_reg(struct regmap *map, void *block,
+					unsigned long *cache_present,
+					unsigned int block_base,
+					unsigned int start,
+					unsigned int end)
+{
+	unsigned int i, val;
+	unsigned int regtmp = 0;
+	int ret = 0;
+	struct reg_default *regs;
+	size_t num_regs = ((end - start) + 1);
+
+	regs = kcalloc(num_regs, sizeof(struct reg_default), GFP_KERNEL);
+	if (!regs)
+		return -ENOMEM;
+
+	num_regs = 0;
+	for (i = start; i < end; i++) {
+		regtmp = block_base + (i * map->reg_stride);
+
+		/* skip registers that are not defined/available */
+		if (!regcache_reg_present(cache_present, i))
+			continue;
+
+		val = regcache_get_val(map, block, i);
+
+		/* Is this the hardware default?  If so skip. */
+		ret = regcache_lookup_reg(map, regtmp);
+		if (ret >= 0 && val == map->reg_defaults[ret].def) {
+			continue;
+		} else {
+			regs[num_regs].reg = regtmp;
+			regs[num_regs].def = val;
+			num_regs += 1;
+		}
+	}
+	ret = 0;
+	if (num_regs) {
+		dev_dbg(map->dev, "%s: start: 0x%x - end: 0x%x\n",
+			__func__, regs[0].reg, regs[num_regs-1].reg);
+		ret = _regmap_raw_multi_reg_write(map, regs, num_regs);
+	}
+	kfree(regs);
+	return ret;
+}
+
 static int regcache_sync_block_raw(struct regmap *map, void *block,
 			    unsigned long *cache_present,
 			    unsigned int block_base, unsigned int start,
@@ -707,7 +753,12 @@ int regcache_sync_block(struct regmap *map, void *block,
 			unsigned int block_base, unsigned int start,
 			unsigned int end)
 {
-	if (regmap_can_raw_write(map) && !map->use_single_rw)
+	if (regmap_can_raw_write(map) && map->can_multi_write)
+		return regcache_sync_block_raw_multi_reg(map, block,
+							 cache_present,
+							 block_base, start,
+							 end);
+	else if (regmap_can_raw_write(map) && !map->use_single_rw)
 		return regcache_sync_block_raw(map, block, cache_present,
 					       block_base, start, end);
 	else

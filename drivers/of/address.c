@@ -450,12 +450,17 @@ static struct of_bus *of_match_bus(struct device_node *np)
 	return NULL;
 }
 
-static int of_empty_ranges_quirk(void)
+static int of_empty_ranges_quirk(struct device_node *np)
 {
 	if (IS_ENABLED(CONFIG_PPC)) {
-		/* To save cycles, we cache the result */
+		/* To save cycles, we cache the result for global "Mac" setting */
 		static int quirk_state = -1;
 
+		/* PA-SEMI sdc DT bug */
+		if (of_device_is_compatible(np, "1682m-sdc"))
+			return true;
+
+		/* Make quirk cached */
 		if (quirk_state < 0)
 			quirk_state =
 				of_machine_is_compatible("Power Macintosh") ||
@@ -490,7 +495,7 @@ static int of_translate_one(struct device_node *parent, struct of_bus *bus,
 	 * This code is only enabled on powerpc. --gcl
 	 */
 	ranges = of_get_property(parent, rprop, &rlen);
-	if (ranges == NULL && !of_empty_ranges_quirk()) {
+	if (ranges == NULL && !of_empty_ranges_quirk(parent)) {
 		pr_err("OF: no ranges; cannot translate\n");
 		return 1;
 	}
@@ -707,7 +712,7 @@ int __weak pci_register_io_range(phys_addr_t addr, resource_size_t size)
 	}
 
 	/* add the range to the list */
-	range = kzalloc(sizeof(*range), GFP_KERNEL);
+	range = kzalloc(sizeof(*range), GFP_ATOMIC);
 	if (!range) {
 		err = -ENOMEM;
 		goto end_register;
@@ -760,7 +765,7 @@ unsigned long __weak pci_address_to_pio(phys_addr_t address)
 	spin_lock(&io_range_lock);
 	list_for_each_entry(res, &io_range_list, list) {
 		if (address >= res->start && address < res->start + res->size) {
-			addr = res->start - address + offset;
+			addr = address - res->start + offset;
 			break;
 		}
 		offset += res->size;
@@ -775,6 +780,22 @@ unsigned long __weak pci_address_to_pio(phys_addr_t address)
 	return (unsigned long) address;
 #endif
 }
+
+const __be32 *of_get_address_by_name(struct device_node *dev, const char *name,
+		u64 *size, unsigned int *flags)
+{
+	int index;
+	if (!name)
+		return NULL;
+
+	/* Try to read "reg-names" property and get the index by name */
+	index = of_property_match_string(dev, "reg-names", name);
+	if (index < 0)
+		return NULL;
+
+	return of_get_address(dev, index, size, flags);
+}
+EXPORT_SYMBOL(of_get_address_by_name);
 
 static int __of_address_to_resource(struct device_node *dev,
 		const __be32 *addrp, u64 size, unsigned int flags,
@@ -1014,3 +1035,19 @@ bool of_dma_is_coherent(struct device_node *np)
 	return false;
 }
 EXPORT_SYMBOL_GPL(of_dma_is_coherent);
+
+void __iomem *of_iomap_by_name(struct device_node *np, const char *name)
+{
+	int index;
+
+	if (!name)
+		return NULL;
+
+	/* Try to read "reg-names" property and get the index by name */
+	index = of_property_match_string(np, "reg-names", name);
+	if (index < 0)
+		return NULL;
+
+	return of_iomap(np, index);
+}
+EXPORT_SYMBOL(of_iomap_by_name);

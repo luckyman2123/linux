@@ -943,7 +943,7 @@ bool dev_valid_name(const char *name)
 		return false;
 
 	while (*name) {
-		if (*name == '/' || isspace(*name))
+		if (*name == '/' || *name == ':' || isspace(*name))
 			return false;
 		name++;
 	}
@@ -1697,6 +1697,7 @@ int __dev_forward_skb(struct net_device *dev, struct sk_buff *skb)
 
 	skb_scrub_packet(skb, true);
 	skb->protocol = eth_type_trans(skb, dev);
+	skb_postpull_rcsum(skb, eth_hdr(skb), ETH_HLEN);
 
 	return 0;
 }
@@ -2565,7 +2566,7 @@ static netdev_features_t harmonize_features(struct sk_buff *skb,
 
 netdev_features_t netif_skb_features(struct sk_buff *skb)
 {
-	const struct net_device *dev = skb->dev;
+	struct net_device *dev = skb->dev;
 	netdev_features_t features = dev->features;
 	u16 gso_segs = skb_shinfo(skb)->gso_segs;
 	__be16 protocol = skb->protocol;
@@ -2573,11 +2574,21 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
 	if (gso_segs > dev->gso_max_segs || gso_segs < dev->gso_min_segs)
 		features &= ~NETIF_F_GSO_MASK;
 
-	if (protocol == htons(ETH_P_8021Q) || protocol == htons(ETH_P_8021AD)) {
-		struct vlan_ethhdr *veh = (struct vlan_ethhdr *)skb->data;
-		protocol = veh->h_vlan_encapsulated_proto;
-	} else if (!vlan_tx_tag_present(skb)) {
-		return harmonize_features(skb, features);
+	/* If encapsulation offload request, verify we are testing
+	 * hardware encapsulation features instead of standard
+	 * features for the netdev
+	 */
+	if (skb->encapsulation)
+		features &= dev->hw_enc_features;
+
+	if (!vlan_tx_tag_present(skb)) {
+		if (unlikely(protocol == htons(ETH_P_8021Q) ||
+			     protocol == htons(ETH_P_8021AD))) {
+			struct vlan_ethhdr *veh = (struct vlan_ethhdr *)skb->data;
+			protocol = veh->h_vlan_encapsulated_proto;
+		} else {
+			goto finalize;
+		}
 	}
 
 	features = netdev_intersect_features(features,
@@ -2593,6 +2604,11 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
 						     NETIF_F_GEN_CSUM |
 						     NETIF_F_HW_VLAN_CTAG_TX |
 						     NETIF_F_HW_VLAN_STAG_TX);
+
+finalize:
+	if (dev->netdev_ops->ndo_features_check)
+		features &= dev->netdev_ops->ndo_features_check(skb, dev,
+								features);
 
 	return harmonize_features(skb, features);
 }
@@ -2611,6 +2627,37 @@ static int xmit_one(struct sk_buff *skb, struct net_device *dev,
 	trace_net_dev_start_xmit(skb, dev);
 	rc = netdev_start_xmit(skb, dev, txq, more);
 	trace_net_dev_xmit(skb, rc, dev, len);
+
+	return rc;
+}
+
+static int xmit_list(struct sk_buff *list, struct net_device *dev,
+		     struct netdev_queue *txq)
+{
+	unsigned int len;
+	int rc;
+	struct sk_buff *skb = list, *head = list;
+
+	/* Call the taps for individual skb's in the list. */
+	if (!list_empty(&ptype_all)) {
+		while (skb) {
+			struct sk_buff *next = skb->next;
+
+			skb->next = NULL;
+
+			dev_queue_xmit_nit(skb, dev);
+
+			skb = next;
+			/* Keep the original list intact. */
+			head->next = skb;
+			head = head->next;
+		}
+	}
+
+	len = list->len;
+	trace_net_dev_start_xmit(list, dev);
+	rc = netdev_start_xmit(list, dev, txq, false);
+	trace_net_dev_xmit(list, rc, dev, len);
 
 	return rc;
 }
@@ -2643,16 +2690,31 @@ out:
 	return skb;
 }
 
+struct sk_buff *dev_hard_start_xmit_list(struct sk_buff *first,
+					 struct net_device *dev,
+					struct netdev_queue *txq, int *ret)
+{
+	struct sk_buff *skb = first;
+	int rc = NETDEV_TX_OK;
+
+	if (skb) {
+		rc = xmit_list(skb, dev, txq);
+		if (unlikely(!dev_xmit_complete(rc)))
+			goto out;
+		skb = NULL;
+	}
+
+out:
+	*ret = rc;
+	return skb;
+}
+
 static struct sk_buff *validate_xmit_vlan(struct sk_buff *skb,
 					  netdev_features_t features)
 {
 	if (vlan_tx_tag_present(skb) &&
-	    !vlan_hw_offload_capable(features, skb->vlan_proto)) {
-		skb = __vlan_put_tag(skb, skb->vlan_proto,
-				     vlan_tx_tag_get(skb));
-		if (skb)
-			skb->vlan_tci = 0;
-	}
+	    !vlan_hw_offload_capable(features, skb->vlan_proto))
+		skb = __vlan_hwaccel_push_inside(skb);
 	return skb;
 }
 
@@ -2668,19 +2730,12 @@ static struct sk_buff *validate_xmit_skb(struct sk_buff *skb, struct net_device 
 	if (unlikely(!skb))
 		goto out_null;
 
-	/* If encapsulation offload request, verify we are testing
-	 * hardware encapsulation features instead of standard
-	 * features for the netdev
-	 */
-	if (skb->encapsulation)
-		features &= dev->hw_enc_features;
-
 	if (netif_needs_gso(dev, skb, features)) {
 		struct sk_buff *segs;
 
 		segs = skb_gso_segment(skb, features);
 		if (IS_ERR(segs)) {
-			segs = NULL;
+			goto out_kfree_skb;
 		} else if (segs) {
 			consume_skb(skb);
 			skb = segs;
@@ -2717,7 +2772,7 @@ out_null:
 
 struct sk_buff *validate_xmit_skb_list(struct sk_buff *skb, struct net_device *dev)
 {
-	struct sk_buff *next, *head = NULL, *tail;
+	struct sk_buff *next, *head = NULL, *tail = NULL;
 
 	for (; skb != NULL; skb = next) {
 		next = skb->next;
@@ -2848,7 +2903,9 @@ static void skb_update_prio(struct sk_buff *skb)
 #define skb_update_prio(skb)
 #endif
 
-static DEFINE_PER_CPU(int, xmit_recursion);
+DEFINE_PER_CPU(int, xmit_recursion);
+EXPORT_SYMBOL(xmit_recursion);
+
 #define RECURSION_LIMIT 10
 
 /**
@@ -2872,6 +2929,7 @@ EXPORT_SYMBOL(dev_loopback_xmit);
  *	__dev_queue_xmit - transmit a buffer
  *	@skb: buffer to transmit
  *	@accel_priv: private data used for L2 forwarding offload
+ *	@skb_list: Boolean used for skb list processing.
  *
  *	Queue a buffer for transmission to a network device. The caller must
  *	have set the device and priority and built the buffer before calling
@@ -2894,7 +2952,8 @@ EXPORT_SYMBOL(dev_loopback_xmit);
  *      the BH enable code must have IRQs enabled so that it will not deadlock.
  *          --BLG
  */
-static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
+static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv,
+			    bool skb_list)
 {
 	struct net_device *dev = skb->dev;
 	struct netdev_queue *txq;
@@ -2961,7 +3020,14 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
 
 			if (!netif_xmit_stopped(txq)) {
 				__this_cpu_inc(xmit_recursion);
-				skb = dev_hard_start_xmit(skb, dev, txq, &rc);
+				if (likely(!skb_list))
+					skb = dev_hard_start_xmit(skb, dev,
+								  txq, &rc);
+				else
+					skb = dev_hard_start_xmit_list(skb,
+								       dev,
+								       txq,
+								       &rc);
 				__this_cpu_dec(xmit_recursion);
 				if (dev_xmit_complete(rc)) {
 					HARD_TX_UNLOCK(dev, txq);
@@ -2995,15 +3061,21 @@ out:
 
 int dev_queue_xmit(struct sk_buff *skb)
 {
-	return __dev_queue_xmit(skb, NULL);
+	return __dev_queue_xmit(skb, NULL, false);
 }
 EXPORT_SYMBOL(dev_queue_xmit);
 
 int dev_queue_xmit_accel(struct sk_buff *skb, void *accel_priv)
 {
-	return __dev_queue_xmit(skb, accel_priv);
+	return __dev_queue_xmit(skb, accel_priv, false);
 }
 EXPORT_SYMBOL(dev_queue_xmit_accel);
+
+int dev_queue_xmit_list(struct sk_buff *skb)
+{
+	return __dev_queue_xmit(skb, NULL, true);
+}
+EXPORT_SYMBOL(dev_queue_xmit_list);
 
 
 /*=======================================================================
@@ -3336,7 +3408,10 @@ enqueue:
 static int netif_rx_internal(struct sk_buff *skb)
 {
 	int ret;
-
+/*BugID-13526 2+1 branch and 2+2 branch  code combination  weiwenwen 12-05-2017 begin*/
+	//WARN_ONCE(skb_cloned(skb), "Cloned packet from dev %s\n",
+	//	  skb->dev->name);
+/*BugID-13526 2+1 branch and 2+2 branch  code combination  weiwenwen 12-05-2017 end*/
 	net_timestamp_check(netdev_tstamp_prequeue, skb);
 
 	trace_netif_rx(skb);
@@ -3608,6 +3683,12 @@ static bool skb_pfmemalloc_protocol(struct sk_buff *skb)
 	}
 }
 
+int (*athrs_fast_nat_recv)(struct sk_buff *skb) __rcu __read_mostly;
+EXPORT_SYMBOL(athrs_fast_nat_recv);
+
+int (*embms_tm_multicast_recv)(struct sk_buff *skb) __rcu __read_mostly;
+EXPORT_SYMBOL(embms_tm_multicast_recv);
+
 static int __netif_receive_skb_core(struct sk_buff *skb, bool pfmemalloc)
 {
 	struct packet_type *ptype, *pt_prev;
@@ -3617,6 +3698,8 @@ static int __netif_receive_skb_core(struct sk_buff *skb, bool pfmemalloc)
 	bool deliver_exact = false;
 	int ret = NET_RX_DROP;
 	__be16 type;
+	int (*fast_recv)(struct sk_buff *skb);
+	int (*embms_recv)(struct sk_buff *skb);
 
 	net_timestamp_check(!netdev_tstamp_prequeue, skb);
 
@@ -3664,6 +3747,18 @@ another_round:
 	}
 
 skip_taps:
+	fast_recv = rcu_dereference(athrs_fast_nat_recv);
+	if (fast_recv) {
+		if (fast_recv(skb)) {
+			ret = NET_RX_SUCCESS;
+			goto unlock;
+		}
+	}
+
+	embms_recv = rcu_dereference(embms_tm_multicast_recv);
+	if (embms_recv)
+		embms_recv(skb);
+
 #ifdef CONFIG_NET_CLS_ACT
 	skb = handle_ing(skb, &pt_prev, &ret, orig_dev);
 	if (!skb)
@@ -3885,6 +3980,7 @@ static int napi_gro_complete(struct sk_buff *skb)
 	}
 
 out:
+	__this_cpu_add(softnet_data.gro_coalesced, NAPI_GRO_CB(skb)->count > 1);
 	return netif_receive_skb_internal(skb);
 }
 
@@ -5073,7 +5169,7 @@ static int __netdev_upper_dev_link(struct net_device *dev,
 	if (__netdev_find_adj(upper_dev, dev, &upper_dev->all_adj_list.upper))
 		return -EBUSY;
 
-	if (__netdev_find_adj(dev, upper_dev, &dev->all_adj_list.upper))
+	if (__netdev_find_adj(dev, upper_dev, &dev->adj_list.upper))
 		return -EEXIST;
 
 	if (master && netdev_master_upper_dev_get(dev))
@@ -6981,10 +7077,20 @@ static int dev_cpu_callback(struct notifier_block *nfb,
 		oldsd->output_queue = NULL;
 		oldsd->output_queue_tailp = &oldsd->output_queue;
 	}
-	/* Append NAPI poll list from offline CPU. */
-	if (!list_empty(&oldsd->poll_list)) {
-		list_splice_init(&oldsd->poll_list, &sd->poll_list);
-		raise_softirq_irqoff(NET_RX_SOFTIRQ);
+	/* Append NAPI poll list from offline CPU, with one exception :
+	 * process_backlog() must be called by cpu owning percpu backlog.
+	 * We properly handle process_queue & input_pkt_queue later.
+	 */
+	while (!list_empty(&oldsd->poll_list)) {
+		struct napi_struct *napi = list_first_entry(&oldsd->poll_list,
+							    struct napi_struct,
+							    poll_list);
+
+		list_del_init(&napi->poll_list);
+		if (napi->poll == process_backlog)
+			napi->state = 0;
+		else
+			____napi_schedule(sd, napi);
 	}
 
 	raise_softirq_irqoff(NET_TX_SOFTIRQ);
@@ -6995,7 +7101,7 @@ static int dev_cpu_callback(struct notifier_block *nfb,
 		netif_rx_internal(skb);
 		input_queue_head_incr(oldsd);
 	}
-	while ((skb = __skb_dequeue(&oldsd->input_pkt_queue))) {
+	while ((skb = skb_dequeue(&oldsd->input_pkt_queue))) {
 		netif_rx_internal(skb);
 		input_queue_head_incr(oldsd);
 	}

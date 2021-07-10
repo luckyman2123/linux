@@ -105,6 +105,13 @@
 #define USB_REQ_LOOPBACK_DATA_READ	0x16
 #define USB_REQ_SET_INTERFACE_DS	0x17
 
+/* Begin 14494 wangguanzhi for 720 mbim switch debug mode */
+#define USB_GET_MSOS_DESC  0xC0
+#define USB_MSOS_VENDOR    0xDD
+#define USB_MSOS_VENDOR1   0xDE
+#define USB_MSOS_VENDOR2   0xDF
+/* End 14494 wangguanzhi for 720 mbim switch debug mode */
+
 /* The Link Power Management (LPM) ECN defines USB_REQ_TEST_AND_SET command,
  * used by hubs to put ports into a new L1 suspend state, except that it
  * forgot to define its number ...

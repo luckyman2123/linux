@@ -382,7 +382,11 @@ extern void __put_mtd_device(struct mtd_info *mtd);
 extern struct mtd_info *get_mtd_device_nm(const char *name);
 extern void put_mtd_device(struct mtd_info *mtd);
 
-
+/*yaotong 20170118 start*/
+extern int mtd_erase_partition(struct mtd_info *mtd);
+extern int mtd_partition_read(struct mtd_info *mtd, loff_t addr, size_t size, void *buf);
+extern int mtd_partition_write(struct mtd_info *mtd, loff_t addr, size_t size, const void *buf);
+/*yaotong 20170118 end*/
 struct mtd_notifier {
 	void (*add)(struct mtd_info *mtd);
 	void (*remove)(struct mtd_info *mtd);

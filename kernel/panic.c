@@ -24,8 +24,19 @@
 #include <linux/init.h>
 #include <linux/nmi.h>
 
+/*yaotong  20170624 start*/
+#include <linux/slab.h>
+#include <linux/mtd/mtd.h>
+/*yaotong  20170624 end */
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/exception.h>
+
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
+
+/* Machine specific panic information string */
+char *mach_panic_string;
 
 int panic_on_oops = CONFIG_PANIC_ON_OOPS_VALUE;
 static unsigned long tainted_mask;
@@ -59,6 +70,65 @@ void __weak panic_smp_self_stop(void)
 		cpu_relax();
 }
 
+
+/*yaotong 20170410 start*/
+/*
+* change flag of restore system partition  in scrub partition
+*/
+#define SYSTEM 0xAD
+#define EFS   0xDE
+void  change_flag_scrub(char part)
+{
+    struct mtd_info *mtd;
+    char *bootflag = NULL;
+    int offset = 0;
+    char err = 0;
+
+/*
+* erase scrub partition
+*/
+    mtd = get_mtd_device(NULL, 8);
+/*caozhiqiang add for count system/efs2 partion restore start bugid:25877*/
+    //mtd_erase_partition(mtd);
+    
+    bootflag = (char *)kzalloc(mtd->writesize*sizeof(char), GFP_KERNEL);
+    printk("write size is %d, erase size is %d\n", mtd->writesize, mtd->erasesize);
+    /*read old data*/
+    mtd_partition_read(mtd, offset, mtd->writesize*sizeof(char), bootflag);
+    /*set crash flag*/
+    bootflag[0] = part;
+
+    /*write new data back to partion*/
+    mtd_erase_partition(mtd);
+    /*caozhiqiang add for count system/efs2 partion restore end bugid:25877*/
+	while(offset < mtd->size)
+	{
+		err = mtd_block_isbad(mtd, offset);
+		if(err)
+		{
+		    printk("block %d is bad\n", offset);
+		    offset += mtd->erasesize;
+		    continue;
+		}
+			
+		if(mtd_partition_write(mtd, offset, mtd->writesize, bootflag) !=0 )
+		{
+			/*write error*/
+			offset += mtd->erasesize;
+			continue;
+		}
+		break;
+	}
+    
+    kfree(bootflag);
+	bootflag = NULL;
+    put_mtd_device(mtd);
+}
+EXPORT_SYMBOL(change_flag_scrub);
+/*yaotong 20170410 end*/
+
+
+
 /**
  *	panic - halt the system
  *	@fmt: The text string to print
@@ -75,6 +145,7 @@ void panic(const char *fmt, ...)
 	long i, i_next = 0;
 	int state = 0;
 
+	trace_kernel_panic(0);
 	/*
 	 * Disable local interrupts. This will prevent panic_smp_self_stop
 	 * from deadlocking the first cpu that invokes the panic, since
@@ -102,6 +173,25 @@ void panic(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, args);
 	va_end(args);
 	pr_emerg("Kernel panic - not syncing: %s\n", buf);
+/*yaotong 20170701 start*/
+/* maxiaoping 2019.09.18 modify for system/efs2 partion restore,start */
+//Kernel panic - not syncing: No working init found.  Try passing init= option to kernel. See Linux Documentation/init.
+//Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
+    if((buf[0] == 'V' && buf[1] == 'F' && buf[2] == 'S') ||
+	   (buf[0] == 'N' && buf[1] == 'o' && buf[3] == 'w') ||
+	   (buf[0] == 'S' && buf[1] == 'Y' && buf[2] == 'S'))	/* wangyadong 2018.12.12 add for system recovery */
+	{
+		pr_emerg("panic: change scrub crash flag as system(0xAD)\n");
+		change_flag_scrub(SYSTEM);
+	}
+	else if(buf[0] == 's' && buf[1] == 'u' && buf[2] == 'b')
+	{
+		pr_emerg("panic: change scrub crash flag as efs(0xDE)\n");
+		change_flag_scrub(EFS);
+	}
+/*yaotong 20170701 end*/
+/* maxiaoping 2019.09.18 modify for system/efs2 partion restore,end */
+	
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing
@@ -164,6 +254,9 @@ void panic(const char *fmt, ...)
 			mdelay(PANIC_TIMER_STEP);
 		}
 	}
+
+	trace_kernel_panic_late(0);
+
 	if (panic_timeout != 0) {
 		/*
 		 * This will not be a clean reboot, with everything
@@ -396,6 +489,11 @@ late_initcall(init_oops_id);
 void print_oops_end_marker(void)
 {
 	init_oops_id();
+
+	if (mach_panic_string)
+		printk(KERN_WARNING "Board Information: %s\n",
+		       mach_panic_string);
+
 	pr_warn("---[ end trace %016llx ]---\n", (unsigned long long)oops_id);
 }
 
