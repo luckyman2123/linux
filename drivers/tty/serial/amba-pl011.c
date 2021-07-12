@@ -59,6 +59,9 @@
 #include <linux/sizes.h>
 #include <linux/io.h>
 #include <linux/acpi.h>
+#include <linux/gpio.h>
+
+
 
 #include "amba-pl011.h"
 
@@ -109,12 +112,20 @@ struct vendor_data {
 
 static unsigned int get_fifosize_arm(struct amba_device *dev)
 {
+#ifdef CONFIG_ARCH_HISI_BVT
+	return 64;
+#else
 	return amba_rev(dev) < 3 ? 16 : 32;
+#endif
 }
 
 static struct vendor_data vendor_arm = {
 	.reg_offset		= pl011_std_offsets,
+#ifdef CONFIG_ARCH_HISI_BVT
+	.ifls			= UART011_IFLS_RX1_8|UART011_IFLS_TX1_8,
+#else
 	.ifls			= UART011_IFLS_RX4_8|UART011_IFLS_TX4_8,
+#endif
 	.fr_busy		= UART01x_FR_BUSY,
 	.fr_dsr			= UART01x_FR_DSR,
 	.fr_cts			= UART01x_FR_CTS,
@@ -405,7 +416,11 @@ static void pl011_dma_probe(struct uart_amba_port *uap)
 				 pl011_reg_to_offset(uap, REG_DR),
 		.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
 		.direction = DMA_MEM_TO_DEV,
+#ifdef  CONFIG_ARCH_HISI_BVT
+		.dst_maxburst = 7,
+#else
 		.dst_maxburst = uap->fifosize >> 1,
+#endif
 		.device_fc = false,
 	};
 	struct dma_chan *chan;
@@ -461,7 +476,11 @@ static void pl011_dma_probe(struct uart_amba_port *uap)
 				pl011_reg_to_offset(uap, REG_DR),
 			.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,
 			.direction = DMA_DEV_TO_MEM,
+#ifdef CONFIG_ARCH_HISI_BVT
+			.src_maxburst = 7,
+#else
 			.src_maxburst = uap->fifosize >> 2,
+#endif
 			.device_fc = false,
 		};
 		struct dma_slave_caps caps;
@@ -1300,6 +1319,24 @@ static void pl011_stop_tx(struct uart_port *port)
 	uap->im &= ~UART011_TXIM;
 	pl011_write(uap->im, uap, REG_IMSC);
 	pl011_dma_tx_stop(uap);
+
+	/*add huangliangben 2020/02/20*/
+   if(uap->port.line == 1)
+	{
+	  int nFR = 0;
+	   while(1)
+		{
+			nFR = pl011_read(uap, REG_FR);
+			if(nFR & 0x80)
+				break;
+			udelay(10); 	
+	   }
+		udelay(1100);		
+		gpio_set_value(6,0);
+		//printk("~~~~~pl011_stop_tx\n");
+   }
+
+
 }
 
 static void pl011_tx_chars(struct uart_amba_port *uap, bool from_irq);
@@ -1316,6 +1353,16 @@ static void pl011_start_tx(struct uart_port *port)
 {
 	struct uart_amba_port *uap =
 	    container_of(port, struct uart_amba_port, port);
+
+
+	/*add huangliangben 2020/02/20*/
+	if(uap->port.line == 1)
+	{
+		gpio_set_value(6,1);
+		//printk("~~~~~pl011_start_tx\n");
+	}
+
+	
 
 	if (!pl011_dma_tx_start(uap))
 		pl011_start_tx_pio(uap);
@@ -2514,6 +2561,13 @@ static int pl011_probe(struct amba_device *dev, const struct amba_id *id)
 
 	amba_set_drvdata(dev, uap);
 
+
+
+	/*add huangliangben 2020/02/20*/
+	ret = gpio_request(6, NULL);
+	ret = gpio_direction_output(6,0);
+
+			
 	return pl011_register_port(uap);
 }
 
@@ -2523,6 +2577,9 @@ static int pl011_remove(struct amba_device *dev)
 
 	uart_remove_one_port(&amba_reg, &uap->port);
 	pl011_unregister_port(uap);
+	gpio_free(6);
+
+	
 	return 0;
 }
 
