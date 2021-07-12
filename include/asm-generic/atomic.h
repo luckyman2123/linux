@@ -195,7 +195,6 @@ static inline int atomic_add_negative(int i, atomic_t *v)
 
 static inline void atomic_add(int i, atomic_t *v)
 {
-	// comment by Clark:: 用宏定义, 生成 atomic_add_return 函数, 在本文件中 ATOMIC_OP_RETURN  ::2021-3-31
 	atomic_add_return(i, v);
 }
 

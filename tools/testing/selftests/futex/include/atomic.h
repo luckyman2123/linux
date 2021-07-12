@@ -21,7 +21,7 @@
 
 #ifndef _ATOMIC_H
 #define _ATOMIC_H
-// comment by Clark:: 结构体 atomic_t 中的 val 值  ::2021-3-31
+
 typedef struct {
 	volatile int val;
 } atomic_t;
