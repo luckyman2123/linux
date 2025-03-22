@@ -65,7 +65,6 @@ static const struct i2c_device_id *i2c_match_id(const struct i2c_device_id *id,
 	return NULL;
 }
 
-i2c_driver
 
 //按id_table来匹配,如果实现了id_table 则按id匹配
 static int i2c_device_match(struct device *dev, struct device_driver *drv)
