@@ -146,8 +146,8 @@ static void kobject_init_internal(struct kobject *kobj)
 {
 	if (!kobj)
 		return;
-	kref_init(&kobj->kref);				//ÒıÓÃ¼ÆÊıÉèÖÃÎª1
-	INIT_LIST_HEAD(&kobj->entry);		//ksetÍ¨¹ıÁ´½ÓentryÕÒµ½kobj
+	kref_init(&kobj->kref);				//å¼•ç”¨è®¡æ•°è®¾ç½®ä¸º1
+	INIT_LIST_HEAD(&kobj->entry);		//kseté€šè¿‡é“¾æ¥entryæ‰¾åˆ°kobj
 	kobj->state_in_sysfs = 0;
 	kobj->state_add_uevent_sent = 0;
 	kobj->state_remove_uevent_sent = 0;
@@ -244,12 +244,12 @@ int kobject_set_name_vargs(struct kobject *kobj, const char *fmt,
  */
 int kobject_set_name(struct kobject *kobj, const char *fmt, ...)
 {
-	va_list vargs;			//²ÎÊıÁĞ±í  Clark
+	va_list vargs;			//å‚æ•°åˆ—è¡¨  Clark
 	int retval;
 
-	va_start(vargs, fmt);		// Í¨¹ıfmtÀ´»ñÈ¡µ½vargs Clark
+	va_start(vargs, fmt);		// é€šè¿‡fmtæ¥è·å–åˆ°vargs Clark
 	retval = kobject_set_name_vargs(kobj, fmt, vargs);
-	va_end(vargs);				// ½áÊø vargs
+	va_end(vargs);				// ç»“æŸ vargs
 
 	return retval;
 }

@@ -61,7 +61,7 @@ static LIST_HEAD(input_handler_list);
  * be mutually exclusive which simplifies locking in drivers implementing
  * input handlers.
  */
-static DEFINE_MUTEX(input_mutex);			//include/linux/mutex.hÎÄ¼şÖĞ¶¨ÒåµÄºê
+static DEFINE_MUTEX(input_mutex);			//include/linux/mutex.hæ–‡ä»¶ä¸­å®šä¹‰çš„å®
 
 static struct input_handler *input_table[8];
 
@@ -100,26 +100,26 @@ static void input_pass_event(struct input_dev *dev,
 
 	rcu_read_lock();
 
-	handle = rcu_dereference(dev->grab);//Ç¿ÖÆÎªinput_devµÄÒ»¸öhandleÖ¸Õë
+	handle = rcu_dereference(dev->grab);//å¼ºåˆ¶ä¸ºinput_devçš„ä¸€ä¸ªhandleæŒ‡é’ˆ
 
-	//ÒÔÏÂÅĞ¶ÏÊÇ·ñ°ó¶¨handler?³ÉÁ¢µ÷ÓÃ³ınput_dev->grab->handler->event()
-	//²»³ÉÁ¢,±éÀúÁ´±íÉÏhandle³ÉÔ±
+	//ä»¥ä¸‹åˆ¤æ–­æ˜¯å¦ç»‘å®šhandler?æˆç«‹è°ƒç”¨é™¤nput_dev->grab->handler->event()
+	//ä¸æˆç«‹,éå†é“¾è¡¨ä¸Šhandleæˆå‘˜
 	if (handle)
-		handle->handler->event(handle, type, code, value);//µ÷ÓÃhandleµÄhandler¶ÔÏóµÄeventº¯Êı
-	else {  //Èç¹ûÃ»ÓĞÇ¿ÖÆÖ¸¶¨handle¾Í»á±éÀúdev->h_listÁ´±íÉÏµÄËùÓĞµÄhandle³ÉÔ±
+		handle->handler->event(handle, type, code, value);//è°ƒç”¨handleçš„handlerå¯¹è±¡çš„eventå‡½æ•°
+	else {  //å¦‚æœæ²¡æœ‰å¼ºåˆ¶æŒ‡å®šhandleå°±ä¼šéå†dev->h_listé“¾è¡¨ä¸Šçš„æ‰€æœ‰çš„handleæˆå‘˜
 		bool filtered = false;
 
 		list_for_each_entry_rcu(handle, &dev->h_list, d_node) {
-			if (!handle->open)  //Ã»´ò¿ª·ÅÆú
+			if (!handle->open)  //æ²¡æ‰“å¼€æ”¾å¼ƒ
 				continue;
 
-			handler = handle->handler; //handle±»´ò¿ª,±»ÓÃ»§½ø³ÌÊ¹ÓÃ,¾Í»áµ÷ÓÃevent 
-			//»òÕßËµÉè±¸±»ÓÃ»§Ê¹ÓÃ,²ÅÓĞ±ØÒªÏòÓÃ»§¿Õ¼äµ¼³öĞÅÏ¢
+			handler = handle->handler; //handleè¢«æ‰“å¼€,è¢«ç”¨æˆ·è¿›ç¨‹ä½¿ç”¨,å°±ä¼šè°ƒç”¨event 
+			//æˆ–è€…è¯´è®¾å¤‡è¢«ç”¨æˆ·ä½¿ç”¨,æ‰æœ‰å¿…è¦å‘ç”¨æˆ·ç©ºé—´å¯¼å‡ºä¿¡æ¯
 			if (!handler->filter) {
 				if (filtered)
 					break;
 
-				handler->event(handle, type, code, value);//Ö»ÓĞÉè±¸±»ÓÃ»§³ÌĞòÊ¹ÓÃ²ÅÄÜÊÕµ½ÊÂ¼ş
+				handler->event(handle, type, code, value);//åªæœ‰è®¾å¤‡è¢«ç”¨æˆ·ç¨‹åºä½¿ç”¨æ‰èƒ½æ”¶åˆ°äº‹ä»¶
 
 			} else if (handler->filter(handle, type, code, value))
 				filtered = true;
@@ -180,19 +180,19 @@ static void input_stop_autorepeat(struct input_dev *dev)
 	del_timer(&dev->timer);
 }
 
-#define INPUT_IGNORE_EVENT	0  //ºöÂÔÊÂ¼ş
-#define INPUT_PASS_TO_HANDLERS	1 //½»¸øhandler´¦Àí
-#define INPUT_PASS_TO_DEVICE	2//½»¸øinput_dev´¦Àí
+#define INPUT_IGNORE_EVENT	0  //å¿½ç•¥äº‹ä»¶
+#define INPUT_PASS_TO_HANDLERS	1 //äº¤ç»™handlerå¤„ç†
+#define INPUT_PASS_TO_DEVICE	2//äº¤ç»™input_devå¤„ç†
 
-#define INPUT_PASS_TO_ALL	(INPUT_PASS_TO_HANDLERS | INPUT_PASS_TO_DEVICE) //½»handlerºÍinput_dev´¦Àí
+#define INPUT_PASS_TO_ALL	(INPUT_PASS_TO_HANDLERS | INPUT_PASS_TO_DEVICE) //äº¤handlerå’Œinput_devå¤„ç†
 
 static void input_handle_event(struct input_dev *dev,
 			       unsigned int type, unsigned int code, int value)
-	//Èç¹ûÊÇ°´¼üÀàĞÍ,codeÊÇ¼üÂë,valueÊÇ¼üÖµ		   
+	//å¦‚æœæ˜¯æŒ‰é”®ç±»å‹,codeæ˜¯é”®ç ,valueæ˜¯é”®å€¼		   
 {
-	int disposition = INPUT_IGNORE_EVENT;//Èç¹û¸Ã±äÁ¿Ã»ÓĞ±ä»¯ºöÂÔÊÂ¼ş,ºóÃæ»á¶Ô¸Ã±äÁ¿¸³Öµ
+	int disposition = INPUT_IGNORE_EVENT;//å¦‚æœè¯¥å˜é‡æ²¡æœ‰å˜åŒ–å¿½ç•¥äº‹ä»¶,åé¢ä¼šå¯¹è¯¥å˜é‡èµ‹å€¼
 
-	switch (type) {//¶Ô²»Í¬µÄÊÂ¼şÀàĞÍ·Ö±ğ´¦Àí
+	switch (type) {//å¯¹ä¸åŒçš„äº‹ä»¶ç±»å‹åˆ†åˆ«å¤„ç†
 
 	case EV_SYN:
 		switch (code) {
@@ -213,19 +213,19 @@ static void input_handle_event(struct input_dev *dev,
 		}
 		break;
 
-	case EV_KEY://·ÖÎö°´¼üÊÂ¼ş
+	case EV_KEY://åˆ†ææŒ‰é”®äº‹ä»¶
 		if (is_event_supported(code, dev->keybit, KEY_MAX) &&
-		    !!test_bit(code, dev->key) != value) { //²âÊÔ°´¼ü×´Ì¬ÊÇ·ñ¸Ä±ä
+		    !!test_bit(code, dev->key) != value) { //æµ‹è¯•æŒ‰é”®çŠ¶æ€æ˜¯å¦æ”¹å˜
 
 			if (value != 2) {
-				__change_bit(code, dev->key);//¸Ä±ä
+				__change_bit(code, dev->key);//æ”¹å˜
 				if (value)
 					input_start_autorepeat(dev, code);
 				else
 					input_stop_autorepeat(dev);
 			}
 
-			disposition = INPUT_PASS_TO_HANDLERS;//±íÊ¾ÊÂ¼şĞèÒªhandlerÀ´´¦Àí
+			disposition = INPUT_PASS_TO_HANDLERS;//è¡¨ç¤ºäº‹ä»¶éœ€è¦handleræ¥å¤„ç†
 		}
 		break;
 
@@ -303,14 +303,14 @@ static void input_handle_event(struct input_dev *dev,
 		break;
 	}
 
-	if (disposition != INPUT_IGNORE_EVENT && type != EV_SYN) // EV_SYNÊÂ¼ş´¦Àí
+	if (disposition != INPUT_IGNORE_EVENT && type != EV_SYN) // EV_SYNäº‹ä»¶å¤„ç†
 		dev->sync = 0;
 
 	if ((disposition & INPUT_PASS_TO_DEVICE) && dev->event) 
-		dev->event(dev, type, code, value); //eventÏòÊäÈë×ÓÏµÍ³±¨¸æÒ»¸ö½«Òª·¢ËÍ¸øÉè±¸µÄÊÂ¼ş(Éè±¸²ÎÓë)
+		dev->event(dev, type, code, value); //eventå‘è¾“å…¥å­ç³»ç»ŸæŠ¥å‘Šä¸€ä¸ªå°†è¦å‘é€ç»™è®¾å¤‡çš„äº‹ä»¶(è®¾å¤‡å‚ä¸)
 
 	if (disposition & INPUT_PASS_TO_HANDLERS)
-		input_pass_event(dev, type, code, value);//ÊÂ¼şĞèÒªhandlerÀ´´¦ÀíµÄÊÂ¼ş,°´¼ü·ÖÎöÖØµãÈçºÎ½«ÊÂ¼ş½»¸øºÏÊÊµÄº¯ÊıÀ´´¦Àí(handler²ÎÓë)
+		input_pass_event(dev, type, code, value);//äº‹ä»¶éœ€è¦handleræ¥å¤„ç†çš„äº‹ä»¶,æŒ‰é”®åˆ†æé‡ç‚¹å¦‚ä½•å°†äº‹ä»¶äº¤ç»™åˆé€‚çš„å‡½æ•°æ¥å¤„ç†(handlerå‚ä¸)
 }
 
 /**
@@ -333,15 +333,15 @@ static void input_handle_event(struct input_dev *dev,
 
 
 void input_event(struct input_dev *dev,
-		 unsigned int type, unsigned int code, int value) //type:ÊÂ¼şÀàĞÍEV_KEY,code:¶ÔÓ¦µÄÊÂ¼şÀàĞÍµÄÖµ,value:Èç¹û°´¼ü±íÊ¾ÊÇ·ñ°´ÏÂ0/1
+		 unsigned int type, unsigned int code, int value) //type:äº‹ä»¶ç±»å‹EV_KEY,code:å¯¹åº”çš„äº‹ä»¶ç±»å‹çš„å€¼,value:å¦‚æœæŒ‰é”®è¡¨ç¤ºæ˜¯å¦æŒ‰ä¸‹0/1
 {
 	unsigned long flags;
 
-	if (is_event_supported(type, dev->evbit, EV_MAX)) { //ÊÇ·ñÖ¸Õë°´¼üÊÂ¼ş,¼ì²édev->evbitÊÇ·ñÉèÖÃ
+	if (is_event_supported(type, dev->evbit, EV_MAX)) { //æ˜¯å¦æŒ‡é’ˆæŒ‰é”®äº‹ä»¶,æ£€æŸ¥dev->evbitæ˜¯å¦è®¾ç½®
 
-		spin_lock_irqsave(&dev->event_lock, flags);//ÊÂ¼şËøËø¶¨
+		spin_lock_irqsave(&dev->event_lock, flags);//äº‹ä»¶é”é”å®š
 		add_input_randomness(type, code, value);
-		input_handle_event(dev, type, code, value);//¼ÌĞøÏòÊäÈë×ÓÏµÍ³·¢ËÍÏà¹ØÊı¾İ
+		input_handle_event(dev, type, code, value);//ç»§ç»­å‘è¾“å…¥å­ç³»ç»Ÿå‘é€ç›¸å…³æ•°æ®
 		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 }
@@ -743,23 +743,23 @@ static const struct input_device_id *input_match_device(struct input_handler *ha
 {
 	const struct input_device_id *id;
 	int i;
-	//forÑ­»·
+	//forå¾ªç¯
 	for (id = handler->id_table; id->flags || id->driver_info; id++) {
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_BUS)
-			if (id->bustype != dev->id.bustype) //×ÜÏßÆ¥Åä
+			if (id->bustype != dev->id.bustype) //æ€»çº¿åŒ¹é…
 				continue;
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_VENDOR)
-			if (id->vendor != dev->id.vendor)//³§ÉÌ
+			if (id->vendor != dev->id.vendor)//å‚å•†
 				continue;
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_PRODUCT)
-			if (id->product != dev->id.product)//²úÆ·
+			if (id->product != dev->id.product)//äº§å“
 				continue;
 
 		if (id->flags & INPUT_DEVICE_ID_MATCH_VERSION)
-			if (id->version != dev->id.version)//°æ±¾
+			if (id->version != dev->id.version)//ç‰ˆæœ¬
 				continue;
 		
 		MATCH_BIT(evbit,  EV_MAX); 
@@ -782,14 +782,14 @@ static const struct input_device_id *input_match_device(struct input_handler *ha
 
 static int input_attach_handler(struct input_dev *dev, struct input_handler *handler)
 {
-	const struct input_device_id *id;//¶¨ÒåÁËÒ»¸öÉè±¸±êÊ¶
+	const struct input_device_id *id;//å®šä¹‰äº†ä¸€ä¸ªè®¾å¤‡æ ‡è¯†
 	int error;
 
-	id = input_match_device(handler, dev);//Æ¥ÅäÅĞ¶Ïhandler->id_table,dev->id
+	id = input_match_device(handler, dev);//åŒ¹é…åˆ¤æ–­handler->id_table,dev->id
 	if (!id)
 		return -ENODEV;
 
-	error = handler->connect(handler, dev, id);//Æ¥Åä³É¹¦µ÷ÓÃconnectº¯Êı½«handlerºÍinput_devÁ¬½ÓÆğÀ´
+	error = handler->connect(handler, dev, id);//åŒ¹é…æˆåŠŸè°ƒç”¨connectå‡½æ•°å°†handlerå’Œinput_devè¿æ¥èµ·æ¥
 	if (error && error != -ENODEV)
 		printk(KERN_ERR
 			"input: failed to attach handler %s to device %s, "
@@ -1625,7 +1625,7 @@ int input_register_device(struct input_dev *dev)
 	int error;
 
 	/* Every input device generates EV_SYN/SYN_REPORT events. */
-	__set_bit(EV_SYN, dev->evbit);//evbit±íÊ¾¸ÃÉè±¸ËùÖ§³ÖµÄÊÂ¼ş,ÕâÀïÖ§³ÖËùÓĞµÄÊÂ¼ş,Ò»¸öÉè±¸¿ÉÖ§³Ö¶à¸öÊÂ¼ş
+	__set_bit(EV_SYN, dev->evbit);//evbitè¡¨ç¤ºè¯¥è®¾å¤‡æ‰€æ”¯æŒçš„äº‹ä»¶,è¿™é‡Œæ”¯æŒæ‰€æœ‰çš„äº‹ä»¶,ä¸€ä¸ªè®¾å¤‡å¯æ”¯æŒå¤šä¸ªäº‹ä»¶
 
 	/* KEY_RESERVED is not supposed to be transmitted to userspace. */
 	__clear_bit(KEY_RESERVED, dev->keybit);
@@ -1638,7 +1638,7 @@ int input_register_device(struct input_dev *dev)
 	 * is handled by the driver itself and we don't do it in input.c.
 	 */
 	init_timer(&dev->timer);
-	if (!dev->rep[REP_DELAY] && !dev->rep[REP_PERIOD]) { //´¦ÀíÖØ¸´°´¼ü
+	if (!dev->rep[REP_DELAY] && !dev->rep[REP_PERIOD]) { //å¤„ç†é‡å¤æŒ‰é”®
 		dev->timer.data = (long) dev;
 		dev->timer.function = input_repeat_key;
 		dev->rep[REP_DELAY] = 250;
@@ -1652,15 +1652,15 @@ int input_register_device(struct input_dev *dev)
 		dev->setkeycode = input_default_setkeycode;
 
 	dev_set_name(&dev->dev, "input%ld",
-		     (unsigned long) atomic_inc_return(&input_no) - 1);//deviceÃû×ÖÔÚsysfsÖĞ·´Ó³
+		     (unsigned long) atomic_inc_return(&input_no) - 1);//deviceåå­—åœ¨sysfsä¸­åæ˜ 
 
-	error = device_add(&dev->dev);//×¢²áµ½Éè±¸Ä£ĞÍ²ÅÄÜÔÚsysfsÖĞ·´Ó³
+	error = device_add(&dev->dev);//æ³¨å†Œåˆ°è®¾å¤‡æ¨¡å‹æ‰èƒ½åœ¨sysfsä¸­åæ˜ 
 	if (error)
 		return error;
 
 	path = kobject_get_path(&dev->dev.kobj, GFP_KERNEL);
 	printk(KERN_INFO "input: %s as %s\n",
-		dev->name ? dev->name : "Unspecified device", path ? path : "N/A");//Êä³ö×¢²áÊ±µÄµ÷ÊÔĞÅÏ¢
+		dev->name ? dev->name : "Unspecified device", path ? path : "N/A");//è¾“å‡ºæ³¨å†Œæ—¶çš„è°ƒè¯•ä¿¡æ¯
 	kfree(path);
 
 	error = mutex_lock_interruptible(&input_mutex);
@@ -1669,11 +1669,11 @@ int input_register_device(struct input_dev *dev)
 		return error;
 	}
 
-	list_add_tail(&dev->node, &input_dev_list);//½«input_dev¼ÓÈëµ½input_dev_listÁ´±í,¸ÃÁ´±í°üº¬ÁËÏµÍ³ÖĞËùÓĞµÄÊäÈëÉè±¸
+	list_add_tail(&dev->node, &input_dev_list);//å°†input_devåŠ å…¥åˆ°input_dev_listé“¾è¡¨,è¯¥é“¾è¡¨åŒ…å«äº†ç³»ç»Ÿä¸­æ‰€æœ‰çš„è¾“å…¥è®¾å¤‡
 	
 
 	list_for_each_entry(handler, &input_handler_list, node)
-		input_attach_handler(dev, handler);//ÓÃÀ´Æ¥Åädev,handler³É¹¦²Å¹ØÁª
+		input_attach_handler(dev, handler);//ç”¨æ¥åŒ¹é…dev,handleræˆåŠŸæ‰å…³è”
 
 	input_wakeup_procfs_readers();
 
@@ -1726,24 +1726,24 @@ int input_register_handler(struct input_handler *handler)
 	struct input_dev *dev;
 	int retval;
 
-	retval = mutex_lock_interruptible(&input_mutex);		//ÉÏËøµÄÔ­Òò,ÊÇÒòÎªÉÏ²ãµÄÓ¦ÓÃ¿ÉÄÜ»áÍ¬Ê±µ÷ÓÃµ×²ãµÄÇı¶¯,µ¼ÖÂ²úÉú¾ºÌ¬,By Clark
+	retval = mutex_lock_interruptible(&input_mutex);		//ä¸Šé”çš„åŸå› ,æ˜¯å› ä¸ºä¸Šå±‚çš„åº”ç”¨å¯èƒ½ä¼šåŒæ—¶è°ƒç”¨åº•å±‚çš„é©±åŠ¨,å¯¼è‡´äº§ç”Ÿç«æ€,By Clark
 	if (retval)
 		return retval;
 
 	INIT_LIST_HEAD(&handler->h_list);
 
 	if (handler->fops != NULL) {
-		if (input_table[handler->minor >> 5]) { //ÊäÈëÉè±¸½ÚµãµÄ´ÎÉè±¸ºÅ ÓÒÒÆ5Î»²åÈëinput_table[]
+		if (input_table[handler->minor >> 5]) { //è¾“å…¥è®¾å¤‡èŠ‚ç‚¹çš„æ¬¡è®¾å¤‡å· å³ç§»5ä½æ’å…¥input_table[]
 			retval = -EBUSY;
 			goto out;
 		}
-		input_table[handler->minor >> 5] = handler;//½«handler·Åµ½¶ÔÓ¦µÄÊı×éÏî
+		input_table[handler->minor >> 5] = handler;//å°†handleræ”¾åˆ°å¯¹åº”çš„æ•°ç»„é¡¹
 	}
 
-	list_add_tail(&handler->node, &input_handler_list);//½«handler¹Òµ½input_handler_list
+	list_add_tail(&handler->node, &input_handler_list);//å°†handleræŒ‚åˆ°input_handler_list
 
 	list_for_each_entry(dev, &input_dev_list, node)
-		input_attach_handler(dev, handler);// Ã¿ËÑË÷Ò»¸ö½Úµã¶¼»áµ÷ÓÃ´Ëº¯Êı 
+		input_attach_handler(dev, handler);// æ¯æœç´¢ä¸€ä¸ªèŠ‚ç‚¹éƒ½ä¼šè°ƒç”¨æ­¤å‡½æ•° 
 
 	input_wakeup_procfs_readers();
 
@@ -1845,7 +1845,7 @@ int input_register_handle(struct input_handle *handle)
 	if (handler->filter)
 		list_add_rcu(&handle->d_node, &dev->h_list);
 	else
-		list_add_tail_rcu(&handle->d_node, &dev->h_list);//handle¹Òµ½¶ÔÓ¦µÄinput_devµÄh_listÁ´±í
+		list_add_tail_rcu(&handle->d_node, &dev->h_list);//handleæŒ‚åˆ°å¯¹åº”çš„input_devçš„h_listé“¾è¡¨
 
 	mutex_unlock(&dev->mutex);
 
@@ -1855,9 +1855,9 @@ int input_register_handle(struct input_handle *handle)
 	 * we can't be racing with input_unregister_handle()
 	 * and so separate lock is not needed here.
 	 */
-	list_add_tail_rcu(&handle->h_node, &handler->h_list);//handle¹Òµ½¶ÔÓ¦µÄhandlerµÄh_listÁ´±í
+	list_add_tail_rcu(&handle->h_node, &handler->h_list);//handleæŒ‚åˆ°å¯¹åº”çš„handlerçš„h_listé“¾è¡¨
 
-	if (handler->start)   //Èç¹ûhandler¶¨ÒåÁËstartº¯Êı½«±»µ÷ÓÃ
+	if (handler->start)   //å¦‚æœhandlerå®šä¹‰äº†startå‡½æ•°å°†è¢«è°ƒç”¨
 		handler->start(handle);
 
 	return 0;
@@ -1902,11 +1902,11 @@ static int input_open_file(struct inode *inode, struct file *file)
 		return err;
 
 	/* No load-on-demand here? */
-	handler = input_table[iminor(inode) >> 5];  // ÓÃiminor(inode)´ú±í´ò¿ªÎÄ¼şµÄ´ÎÉè±¸ºÅ³ıÒÔ32×ö¸ÃÈ«¾ÖÊı×éµÄË÷ÒıÈ¡³öhandler
-						//ÔÚinput_register_handlerÊ±¶Ô¸ÃÊı×é³õÊ¼»¯
-	//Èç¹û´æÔÚ
+	handler = input_table[iminor(inode) >> 5];  // ç”¨iminor(inode)ä»£è¡¨æ‰“å¼€æ–‡ä»¶çš„æ¬¡è®¾å¤‡å·é™¤ä»¥32åšè¯¥å…¨å±€æ•°ç»„çš„ç´¢å¼•å–å‡ºhandler
+						//åœ¨input_register_handleræ—¶å¯¹è¯¥æ•°ç»„åˆå§‹åŒ–
+	//å¦‚æœå­˜åœ¨
 	if (handler)
-		new_fops = fops_get(handler->fops);//»ñµÃĞÂµÄÎÄ¼ş²Ù×÷Ö¸Õë,ºóÃæ¾ÍÓÃnew_fopsÀ´²Ù×÷
+		new_fops = fops_get(handler->fops);//è·å¾—æ–°çš„æ–‡ä»¶æ“ä½œæŒ‡é’ˆ,åé¢å°±ç”¨new_fopsæ¥æ“ä½œ
 		
 
 	mutex_unlock(&input_mutex);
@@ -1915,7 +1915,7 @@ static int input_open_file(struct inode *inode, struct file *file)
 	 * That's _really_ odd. Usually NULL ->open means "nothing special",
 	 * not "no device". Oh, well...
 	 */
-	if (!new_fops || !new_fops->open) {//ÅĞ¶ÏÊÇ·ñ¶¨Òåopen
+	if (!new_fops || !new_fops->open) {//åˆ¤æ–­æ˜¯å¦å®šä¹‰open
 		fops_put(new_fops); 
 		err = -ENODEV;
 		goto out;
@@ -1924,7 +1924,7 @@ static int input_open_file(struct inode *inode, struct file *file)
 	old_fops = file->f_op;
 	file->f_op = new_fops;
 
-	err = new_fops->open(inode, file);//ÓÃĞÂµÄopen´ò¿ª
+	err = new_fops->open(inode, file);//ç”¨æ–°çš„openæ‰“å¼€
 	if (err) {
 		fops_put(file->f_op);
 		file->f_op = fops_get(old_fops);
@@ -1936,7 +1936,7 @@ out:
 
 static const struct file_operations input_fops = {
 	.owner = THIS_MODULE,
-	.open = input_open_file,//×ªÒÆµ½input_handler,±ãÓÚ²»Í¬µÄhandler¶Ô²»Í¬µÄÎÄ¼ş´ò¿ª·½·¨
+	.open = input_open_file,//è½¬ç§»åˆ°input_handler,ä¾¿äºä¸åŒçš„handlerå¯¹ä¸åŒçš„æ–‡ä»¶æ‰“å¼€æ–¹æ³•
 };
 
 static void __init input_init_abs_bypass(void)
@@ -1953,17 +1953,17 @@ static int __init input_init(void)
 
 	input_init_abs_bypass();
 
-	err = class_register(&input_class);//×¢²áÀà,ËùÓĞµÄinput dev¶¼ÔÚÊôÓÚ¸ÃÀà sysfs:/dev/class/input
+	err = class_register(&input_class);//æ³¨å†Œç±»,æ‰€æœ‰çš„input devéƒ½åœ¨å±äºè¯¥ç±» sysfs:/dev/class/input
 	if (err) {
 		printk(KERN_ERR "input: unable to register input_dev class\n");
 		return err;
 	}
 
-	err = input_proc_init();//½¨Á¢Ïà¹Øsysfs½»»¥µÄÎÄ¼ş
+	err = input_proc_init();//å»ºç«‹ç›¸å…³sysfsäº¤äº’çš„æ–‡ä»¶
 	if (err)
 		goto fail1;
 
-	err = register_chrdev(INPUT_MAJOR, "input", &input_fops);//input devÖ÷Éè±¸ºÅÎª13,´ÎÉè±¸ºÅ0-255,²Ù×÷Ö¸Õëinput_fops
+	err = register_chrdev(INPUT_MAJOR, "input", &input_fops);//input devä¸»è®¾å¤‡å·ä¸º13,æ¬¡è®¾å¤‡å·0-255,æ“ä½œæŒ‡é’ˆinput_fops
 	
 	if (err) {
 		printk(KERN_ERR "input: unable to register char major %d", INPUT_MAJOR);

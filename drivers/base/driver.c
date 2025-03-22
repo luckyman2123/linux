@@ -176,7 +176,7 @@ EXPORT_SYMBOL_GPL(get_driver);
  * @drv: driver.
  */
 
-// É¾³ýdriverµÄÒýÓÃ,By Clark 19-09-13
+// åˆ é™¤driverçš„å¼•ç”¨,By Clark 19-09-13
 void put_driver(struct device_driver *drv)
 {
 	kobject_put(&drv->p->kobj);
@@ -281,7 +281,7 @@ EXPORT_SYMBOL_GPL(driver_unregister);
  */
 struct device_driver *driver_find(const char *name, struct bus_type *bus)
 {
-	//¹ÒÔØÔÚbusÉÏµÄÇý¶¯kset
+	//æŒ‚è½½åœ¨busä¸Šçš„é©±åŠ¨kset
 	struct kobject *k = kset_find_obj(bus->p->drivers_kset, name);
 	struct driver_private *priv;		
 
@@ -289,6 +289,6 @@ struct device_driver *driver_find(const char *name, struct bus_type *bus)
 		priv = to_driver(k);
 		return priv->driver;
 	}
-	return NULL;		//µÚÒ»´Î¼ÓÈëÉè±¸ÒòÖ®Ç°Ã»×¢²á,ÔÚksetÖÐÕÒ²»µ½ÏàÓ¦µÄkobject, ËùÒÔ·µ»ØNULL.
+	return NULL;		//ç¬¬ä¸€æ¬¡åŠ å…¥è®¾å¤‡å› ä¹‹å‰æ²¡æ³¨å†Œ,åœ¨ksetä¸­æ‰¾ä¸åˆ°ç›¸åº”çš„kobject, æ‰€ä»¥è¿”å›žNULL.
 }
 EXPORT_SYMBOL_GPL(driver_find);

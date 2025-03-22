@@ -890,7 +890,7 @@ int Ssfdc_D_WriteRedtData(struct us_data *us, BYTE *redundant)
 //----- Ssfdc_D_CheckStatus() ------------------------------------------
 int Ssfdc_D_CheckStatus(void)
 {
-    // Driver §£∞µ
+    // Driver „ÅÉÊöó
     return(SMSUCCESS);
     //_Set_D_SsfdcRdCmd(RDSTATUS);
     //
@@ -1519,7 +1519,7 @@ int Check_D_CISdata(BYTE *buf, BYTE *redundant)
 //----- Set_D_RightECC() ----------------------------------------------
 void Set_D_RightECC(BYTE *redundant)
 {
-    // Driver §£∞µ ECC Check
+    // Driver „ÅÉÊöó ECC Check
     return;
     //StringCopy((char *)(redundant+0x0D),(char *)EccBuf,3);
     //StringCopy((char *)(redundant+0x08),(char *)(EccBuf+0x03),3);

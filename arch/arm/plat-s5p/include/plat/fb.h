@@ -35,8 +35,8 @@ struct s3c_platform_fb {
 	phys_addr_t	pmem_start[5]; /* starting physical address of memory region */
 	size_t		pmem_size[5]; /* size of memory region */
 	void            *lcd;
-	void		(*cfg_gpio)(struct platform_device *dev);//¹¦ÄÜ¹Ü½ÅÉèÖÃ
-	int		(*backlight_on)(struct platform_device *dev);//±³¹âÉèÖÃ
+	void		(*cfg_gpio)(struct platform_device *dev);//åŠŸèƒ½ç®¡è„šè®¾ç½®
+	int		(*backlight_on)(struct platform_device *dev);//èƒŒå…‰è®¾ç½®
 	int		(*backlight_onoff)(struct platform_device *dev, int onoff);
 	int		(*reset_lcd)(struct platform_device *dev);
 	int		(*clk_on)(struct platform_device *pdev, struct clk **s3cfb_clk);
@@ -90,11 +90,11 @@ struct s3c_fb_pd_win {
  *
  */
 struct s3c_fb_platdata {
-	void	(*setup_gpio)(void); //¹¦ÄÜÒı½ÅÉèÖÃ
+	void	(*setup_gpio)(void); //åŠŸèƒ½å¼•è„šè®¾ç½®
 
-	struct s3c_fb_pd_win	*win[S3C_FB_MAX_WIN];//´°¿ÚÉèÖÃ A8ÓĞ¶à´°¿Ú
+	struct s3c_fb_pd_win	*win[S3C_FB_MAX_WIN];//çª—å£è®¾ç½® A8æœ‰å¤šçª—å£
 
-	u32			 vidcon0;//¿ØÖÆ¼Ä´æÆ÷
+	u32			 vidcon0;//æ§åˆ¶å¯„å­˜å™¨
 	u32			 vidcon1;
 };
 

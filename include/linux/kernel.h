@@ -642,7 +642,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  * @member:	the name of the member within the struct.
  *
  */
-//ÓÉÐ¡µ½´ó __mptrÊÇÖ¸ÏòmemberÀàÐÍµÄÒ»¸öÖ¸Õë, offsetofÊÇÖ¸³ÉÔ±ÔÚ½á¹¹ÌåÖÐµÄÆ«ÒÆ, ¼õÈ¥Æ«ÒÆ¼´¿ÉµÃµ½½á¹¹ÌåµÄÎ»ÖÃ
+//ç”±å°åˆ°å¤§ __mptræ˜¯æŒ‡å‘memberç±»åž‹çš„ä¸€ä¸ªæŒ‡é’ˆ, offsetofæ˜¯æŒ‡æˆå‘˜åœ¨ç»“æž„ä½“ä¸­çš„åç§», å‡åŽ»åç§»å³å¯å¾—åˆ°ç»“æž„ä½“çš„ä½ç½®
 #define container_of(ptr, type, member) ({			\
 	const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
 	(type *)( (char *)__mptr - offsetof(type,member) );})

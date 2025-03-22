@@ -1,14 +1,14 @@
 /***********************************************************************************
 * drivers/char/fs210_beep.c
-* ���ܼ�Ҫ�� 
-*	������ע��һ���ַ��豸��/dev/EmbedSky-beep��, ���ڿ��Ʒ�������
-* �ṩ�Ľӿڣ�
+* 功能简要： 
+*	该驱动注册一个字符设备“/dev/EmbedSky-beep”, 用于控制蜂鸣器。
+* 提供的接口：
 *       ioctol(struct inode *inode,struct file *file,unsigned int brightness);
-*	���ڵ��ط��������ķ���������Ч����ֵΪ��1��100��
-*	�����������Թ̶���Ƶ�ʣ���ͨ��������Чʱ����������Ʒ�������
-* ����ʵ����
-*	�ṩ����̨������ʽ�Ĳ��Գ���
-*	�ṩQT4���滯�Ĳ��Գ���
+*	用于调控蜂鸣器。改蜂鸣器的有效调整值为［1，100］
+*	在驱动中是以固定的频率，仅通过调整有效时序宽度来控制蜂鸣器。
+* 调用实例：
+*	提供控制台，命令式的测试程序。
+*	提供QT4界面化的测试程序
 *
 *************************************************************************************/
 #include <linux/delay.h>
@@ -52,13 +52,13 @@ struct pwm_beeper {
 static struct  pwm_beeper *beeper;
 #endif
 
-/* ����ָ��LED���õ�GPIO���� */
+/* 用来指定LED所用的GPIO引脚 */
 static unsigned long gpio_table [] =
 {
 	S5PV210_GPD0(1),
 };
 
-/* ����ָ��GPIO���ŵĹ��ܣ���� */
+/* 用来指定GPIO引脚的功能：输出 */
 static unsigned int gpio_cfg_table [] =
 {
 	S3C_GPIO_SFN(2),
@@ -66,8 +66,8 @@ static unsigned int gpio_cfg_table [] =
 
 
 /*
-*�����������趨�ö�ʱ��1��PWMģʽ��
-*��ʼ��Ч��ʱ��1
+*函数用于在设定好定时器1的PWM模式后，
+*开始生效定时器1
 */
 static void s3c210_beep_start(void)
 {
@@ -85,10 +85,10 @@ static void s3c210_beep_start(void)
 		s3c_gpio_setpull(gpio_table[i], S3C_GPIO_PULL_NONE);
 	}
 	
-        tcon = __raw_readl(S3C2410_TCON);//��ȡʱ�ӿ��ƼĴ���
-        tcon |= S3C2410_TCON_T1START;//��ʼλ��1,�ö�ʱ����ʼ���� ��ʱ��1
-        tcon &= ~S3C2410_TCON_T1MANUALUPD;//֮ǰ�Ѿ����ú���TCNTB1 �Լ� TCMPB1�����������κβ���
-        __raw_writel(tcon, S3C2410_TCON);//������д�ؼĴ���
+        tcon = __raw_readl(S3C2410_TCON);//读取时钟控制寄存器
+        tcon |= S3C2410_TCON_T1START;//开始位置1,让定时器开始工作 定时器1
+        tcon &= ~S3C2410_TCON_T1MANUALUPD;//之前已经设置好了TCNTB1 以及 TCMPB1，这里无须任何操作
+        __raw_writel(tcon, S3C2410_TCON);//将设置写回寄存器
 #endif
 
 }
@@ -102,7 +102,7 @@ static void s3c210_beep_off(void)
         unsigned long tcon;
         int err;
       
-	//��GPD[1]��������Ϊ����
+	//将GPD[1]引脚设置为输入
 	gpio_free(gpio_table [0]);
 	err = gpio_request(gpio_table[0], "GPD0_1");
 	if(err)
@@ -113,10 +113,10 @@ static void s3c210_beep_off(void)
 	s3c_gpio_cfgpin(gpio_table [0],S3C_GPIO_SFN(0));
 	gpio_direction_output(gpio_table [0],0);
 	//s3c_gpio_setpin(gpio_table [0],0);
-	//����ʱ�����ƼĴ����е�TIMER1��ʼλ����Ϊ0
+	//将定时器控制寄存器中的TIMER1开始位设置为0
 	tcon = __raw_readl(S3C2410_TCON);
 	tcon &= ~S3C2410_TCON_T1START;
-	tcon &= ~S3C2410_TCON_T1MANUALUPD;//ֹͣ���¹���
+	tcon &= ~S3C2410_TCON_T1MANUALUPD;//停止更新功能
 	__raw_writel(tcon, S3C2410_TCON); //stop the timer1
 #endif
 }
@@ -129,55 +129,55 @@ static void s3c210_set_timer1(unsigned long Val)
 	s3c_gpio_cfgpin(S3C64XX_GPF(15),S3C64XX_GPF15_PWM_TOUT1);
 	pwm_config(beeper->pwm, beeper->step_ns*Val, beeper->period);
 #else
-        unsigned long tcon;//���ڴ��ʱ�ӿ��ƼĴ�������ֵ
-        unsigned long tcnt;//���ڴ��TCNTB1����ֵ
-        unsigned long tcmp;//���ڴ��TCMPB1����ֵ
-        unsigned long tcfg1;//���ڴ�Ŷ�ʱ�����üĴ���1����ֵ
-        unsigned long tcfg0;//���ڴ�Ŷ�ʱ�����üĴ���0����ֵ
+        unsigned long tcon;//用于存放时钟控制寄存器的数值
+        unsigned long tcnt;//用于存放TCNTB1的数值
+        unsigned long tcmp;//用于存放TCMPB1的数值
+        unsigned long tcfg1;//用于存放定时器配置寄存器1的数值
+        unsigned long tcfg0;//用于存放定时器配置寄存器0的数值
 	unsigned char i;
       
-	 tcnt = 0xffffffff;  /* Ĭ�ϵ�TCTB1��ֵ*/
+	 tcnt = 0xffffffff;  /* 默认的TCTB1数值*/
 
-        /* ��ȡTCON��TCFG0�Լ�TCFG1�Ĵ�������ֵ*/
+        /* 读取TCON，TCFG0以及TCFG1寄存器的数值*/
         tcon = __raw_readl(S3C2410_TCON);
         tcfg1 =__raw_readl(S3C2410_TCFG1);
         tcfg0 =__raw_readl(S3C2410_TCFG0);
 
-	/*��ʱ������Ƶ�� = PCLK / ( {Ԥ��Ƶ��ֵ + 1} ) / {�ָ���ֵ}
-	*{Ԥ��Ƶ��ֵ} = 1~255����TCFG0���üĴ���������
-	*{�ָ���ֵ} = 1, 2, 4, 8, 16, TCLK����TCFG1���üĴ���������
+	/*定时器输入频率 = PCLK / ( {预分频数值 + 1} ) / {分割数值}
+	*{预分频数值} = 1~255，由TCFG0配置寄存器来配置
+	*{分割数值} = 1, 2, 4, 8, 16, TCLK，由TCFG1配置寄存器来配置
 	*/
       
-	//����GPF15Ϊ���
+	//配置GPF15为输出
 	for (i = 0; i < sizeof(gpio_table)/sizeof(unsigned long); i++)
 	{
 		s3c_gpio_cfgpin(gpio_table[i], gpio_cfg_table[i]);
 		s3c_gpio_setpull(gpio_table[i], S3C_GPIO_PULL_NONE);
 	}
-	//����TCFG1[4:7]
+	//清零TCFG1[4:7]
         tcfg1 &= ~S3C2410_TCFG1_MUX1_MASK;
-	//���÷ָ�ֵΪ2
+	//设置分割值为2
         tcfg1 |= S3C2410_TCFG1_MUX1_DIV2;//set [4:7]== 1/2
-	//����Ԥ��ƵλTCFG0[0:7]
+	//清零预分频位TCFG0[0:7]
         tcfg0 &= ~S3C2410_TCFG_PRESCALER0_MASK;
-	//����Ԥ��Ƶ��ֵ��������254
+	//设置预分频数值，这里是254
         tcfg0 |= (PRESCALER) << 0;
-	//����TCON[8:10]
+	//清零TCON[8:10]
         tcon &= ~(7<<8); //set bit [8:10] to zero
-	//���ö�ʱ������ģʽΪ�Զ�����ģʽ(auto-reload)
+	//设置定时器工作模式为自动加载模式(auto-reload)
         tcon |= S3C2410_TCON_T1RELOAD;
-	//�����úõ�TCON��TCFG0��TCFG1����ֵд�ؼĴ���
+	//将配置好的TCON，TCFG0，TCFG1的数值写回寄存器
 	__raw_writel(tcfg1, S3C2410_TCFG1);
 	__raw_writel(tcfg0, S3C2410_TCFG0);
 	__raw_writel(tcon, S3C2410_TCON);
 	
-	//׼������TCMPB1��ֵ������1 TCON[9]
+	//准备更新TCMPB1数值，先置1 TCON[9]
 	tcon |= S3C2410_TCON_T1MANUALUPD;
 	__raw_writel(tcon, S3C2410_TCON);	
-	//TCNTB1==200������ֵ������PWM��Ƶ��
+	//TCNTB1==200，改数值决定了PWM的频率
 	tcnt = 101;
 	 __raw_writel(tcnt, S3C2410_TCNTB(1));
-	//�ı�TCMPB1����ֵ������ֵ����PWM��Ƶ��
+	//改变TCMPB1的数值，改数值决定PWM的频宽
 	tcmp = Val;
 	__raw_writel(tcmp, S3C2410_TCMPB(1));
 #endif
@@ -190,55 +190,55 @@ static void s3c210_set_timer1(unsigned long Val)
 	s3c_gpio_cfgpin(S3C64XX_GPF(15),S3C64XX_GPF15_PWM_TOUT1);
 	pwm_config(beeper->pwm, beeper->step_ns*Val, beeper->period);
 #else
-        unsigned long tcon;//���ڴ��ʱ�ӿ��ƼĴ�������ֵ
-        unsigned long tcnt;//���ڴ��TCNTB1����ֵ
-        unsigned long tcmp;//���ڴ��TCMPB1����ֵ
-        unsigned long tcfg1;//���ڴ�Ŷ�ʱ�����üĴ���1����ֵ
-        unsigned long tcfg0;//���ڴ�Ŷ�ʱ�����üĴ���0����ֵ
+        unsigned long tcon;//用于存放时钟控制寄存器的数值
+        unsigned long tcnt;//用于存放TCNTB1的数值
+        unsigned long tcmp;//用于存放TCMPB1的数值
+        unsigned long tcfg1;//用于存放定时器配置寄存器1的数值
+        unsigned long tcfg0;//用于存放定时器配置寄存器0的数值
 	unsigned char i;
       
-	 tcnt = 0xffffffff;  /* Ĭ�ϵ�TCTB1��ֵ*/
+	 tcnt = 0xffffffff;  /* 默认的TCTB1数值*/
 
-        /* ��ȡTCON��TCFG0�Լ�TCFG1�Ĵ�������ֵ*/
+        /* 读取TCON，TCFG0以及TCFG1寄存器的数值*/
         tcon = __raw_readl(S3C2410_TCON);
         tcfg1 =__raw_readl(S3C2410_TCFG1);
         tcfg0 =__raw_readl(S3C2410_TCFG0);
 
-	/*��ʱ������Ƶ�� = PCLK / ( {Ԥ��Ƶ��ֵ + 1} ) / {�ָ���ֵ}
-	*{Ԥ��Ƶ��ֵ} = 1~255����TCFG0���üĴ���������
-	*{�ָ���ֵ} = 1, 2, 4, 8, 16, TCLK����TCFG1���üĴ���������
+	/*定时器输入频率 = PCLK / ( {预分频数值 + 1} ) / {分割数值}
+	*{预分频数值} = 1~255，由TCFG0配置寄存器来配置
+	*{分割数值} = 1, 2, 4, 8, 16, TCLK，由TCFG1配置寄存器来配置
 	*/
       
-	//����GPF15Ϊ���
+	//配置GPF15为输出
 	for (i = 0; i < sizeof(gpio_table)/sizeof(unsigned long); i++)
 	{
 		s3c_gpio_cfgpin(gpio_table[i], gpio_cfg_table[i]);
 		s3c_gpio_setpull(gpio_table[i], S3C_GPIO_PULL_NONE);
 	}
-	//����TCFG1[4:7]
+	//清零TCFG1[4:7]
         tcfg1 &= ~S3C2410_TCFG1_MUX1_MASK;
-	//���÷ָ�ֵΪ2
+	//设置分割值为2
         tcfg1 |= S3C2410_TCFG1_MUX1_DIV2;//set [4:7]== 1/2
-	//����Ԥ��ƵλTCFG0[0:7]
+	//清零预分频位TCFG0[0:7]
         tcfg0 &= ~S3C2410_TCFG_PRESCALER0_MASK;
-	//����Ԥ��Ƶ��ֵ��������254
+	//设置预分频数值，这里是254
  //       tcfg0 |= (PRESCALER) << 0;//backlight pwm0
-	//����TCON[8:10]
+	//清零TCON[8:10]
         tcon &= ~(7<<8); //set bit [8:10] to zero
-	//���ö�ʱ������ģʽΪ�Զ�����ģʽ(auto-reload)
+	//设置定时器工作模式为自动加载模式(auto-reload)
         tcon |= S3C2410_TCON_T1RELOAD;
-	//�����úõ�TCON��TCFG0��TCFG1����ֵд�ؼĴ���
+	//将配置好的TCON，TCFG0，TCFG1的数值写回寄存器
 	__raw_writel(tcfg1, S3C2410_TCFG1);
 //	__raw_writel(tcfg0, S3C2410_TCFG0);//backlight pwm0 div
 	__raw_writel(tcon, S3C2410_TCON);
 	
-	//׼������TCMPB1��ֵ������1 TCON[9]
+	//准备更新TCMPB1数值，先置1 TCON[9]
 	tcon |= S3C2410_TCON_T1MANUALUPD;
 	__raw_writel(tcon, S3C2410_TCON);	
-	//TCNTB1==200������ֵ������PWM��Ƶ��
+	//TCNTB1==200，改数值决定了PWM的频率
 	tcnt = 101*255;
 	 __raw_writel(tcnt, S3C2410_TCNTB(1));
-	//�ı�TCMPB1����ֵ������ֵ����PWM��Ƶ��
+	//改变TCMPB1的数值，改数值决定PWM的频宽
 	tcmp = Val*255;
 	__raw_writel(tcmp, S3C2410_TCMPB(1));
 #endif
@@ -246,8 +246,8 @@ static void s3c210_set_timer1(unsigned long Val)
 
 #endif
 /*
-*���������ڸ��¶�ʱ��1��TCTB1�Լ�TCMPB1����ֵ��
-*ͨ������
+*函数用于在更新定时器1的TCTB1以及TCMPB1的数值，
+*通过更新
 */
 static long fs210_beep_ioctl(struct file *file,unsigned int CMD_ON_OFF, unsigned long Val)
 {
@@ -256,18 +256,18 @@ static long fs210_beep_ioctl(struct file *file,unsigned int CMD_ON_OFF, unsigned
 	{
 		s3c210_beep_off();
 	}
-	else//����TCTB1��TCMPB1����ֵ
+	else//更新TCTB1，TCMPB1的数值
 	{
 		s3c210_set_timer1(Val);
-		//���¿�ʼ������ʱ��
+		//重新开始启动定时器
 		s3c210_beep_start();
 	}
 	return 0;
 }
 #ifdef CONFIG_FS210_DEBUG_BEEP
 /*
-*���������ڸ��¶�ʱ��1��TCTB1�Լ�TCMPB1����ֵ��
-*ͨ������
+*函数用于在更新定时器1的TCTB1以及TCMPB1的数值，
+*通过更新
 */
 static int fs210_beep_debug(unsigned int CMD_ON_OFF, unsigned long Val)
 {
@@ -276,10 +276,10 @@ static int fs210_beep_debug(unsigned int CMD_ON_OFF, unsigned long Val)
 	{
 		s3c210_beep_off();
 	}
-	else//����TCTB1��TCMPB1����ֵ
+	else//更新TCTB1，TCMPB1的数值
 	{
 		s3c210_set_timer1(Val);
-		//��ʼ������ʱ��
+		//开始启动定时器
 		s3c210_beep_start();
 	}
 	return 0;
@@ -309,19 +309,19 @@ static int fs210_beep_open(struct inode *inode, struct file *file)
 	printk(KERN_INFO " beep opened done.....\n\n");
 #endif
 	clk_p = clk_get(NULL, "pclk");
-	pclk  = clk_get_rate(clk_p);//�õ�ʱ��Ƶ��
+	pclk  = clk_get_rate(clk_p);//得到时钟频率
 	printk("%s : pclk=0x%lx\n", __func__,pclk);
 
 	return 0;
 
 }
-/*�ر��豸�Ľӿ�*/
+/*关闭设备的接口*/
 static int fs210_adc_close(struct inode *inode, struct file *file)
 {
 	s3c210_beep_off();
 	return 0;
 }
-/*�ӿ�ע��*/
+/*接口注册*/
 static struct file_operations s3c210_beep_fops=
 {
         .owner=THIS_MODULE,
@@ -334,7 +334,7 @@ static struct miscdevice fs210_beep_miscdev = {
 	.name		=  DEVICE_NAME,
 	.fops		= &s3c210_beep_fops,
 };
-/*�豸��ʼ������*/
+/*设备初始化函数*/
 static int s3c210_beep_init(void)
 {
 	int ret,error;
@@ -395,7 +395,7 @@ err_free:
 	//return error;
 }
 
-/*ж�غ���*/
+/*卸载函数*/
 static void s3c210_beep_exit(void)
 {
 	misc_deregister(&fs210_beep_miscdev);

@@ -419,7 +419,7 @@ int dev_set_drvdata(struct device *dev, void *data)
 	int error;
 
 	if (!dev->p) {
-		error = device_private_init(dev);			//Ë½ÓĞÊı¾İ
+		error = device_private_init(dev);			//ç§æœ‰æ•°æ®
 		if (error)
 			return error;
 	}

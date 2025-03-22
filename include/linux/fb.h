@@ -156,9 +156,9 @@
 
 struct fb_fix_screeninfo {
 	char id[16];			/* identification string eg "TT Builtin" */
-	unsigned long smem_start;	/* Start of frame buffer mem  ÎïÀíÏÔ´æÆğÊ¼µØÖ·*/
+	unsigned long smem_start;	/* Start of frame buffer mem  ç‰©ç†æ˜¾å­˜èµ·å§‹åœ°å€*/
 					/* (physical address) */
-	__u32 smem_len;			/* Length of frame buffer mem ÎïÀíÏÔ´æ´óĞ¡*/
+	__u32 smem_len;			/* Length of frame buffer mem ç‰©ç†æ˜¾å­˜å¤§å°*/
 	__u32 type;			/* see FB_TYPE_*		*/
 	__u32 type_aux;			/* Interleave for interleaved Planes */
 	__u32 visual;			/* see FB_VISUAL_*		*/ 
@@ -238,14 +238,14 @@ struct fb_bitfield {
 #define KHZ2PICOS(a) (1000000000UL/(a))
 
 struct fb_var_screeninfo {
-	__u32 xres;			/* visible resolution ¿É¼û·Ö±æÂÊ*/
+	__u32 xres;			/* visible resolution å¯è§åˆ†è¾¨ç‡*/
 	__u32 yres;			
 	__u32 xres_virtual;		/* virtual resolution		*/
 	__u32 yres_virtual;
 	__u32 xoffset;			/* offset from virtual to visible */
 	__u32 yoffset;			/* resolution			*/
 
-	__u32 bits_per_pixel;		/* guess what Ã¿¸öÏñËØµãÕ¼¶àÉÙÎ»*/
+	__u32 bits_per_pixel;		/* guess what æ¯ä¸ªåƒç´ ç‚¹å å¤šå°‘ä½*/
 	__u32 grayscale;		/* != 0 Graylevels instead of colors */
 
 	struct fb_bitfield red;		/* bitfield in fb mem if true color, */
@@ -837,8 +837,8 @@ struct fb_info {
 	int flags;
 	struct mutex lock;		/* Lock for open/release/ioctl funcs */
 	struct mutex mm_lock;		/* Lock for fb_mmap and smem_* fields */
-	struct fb_var_screeninfo var;	/* Current var ¿É±ä²ÎÊı */
-	struct fb_fix_screeninfo fix;	/* Current fix ¹Ì¶¨²ÎÊı*/
+	struct fb_var_screeninfo var;	/* Current var å¯å˜å‚æ•° */
+	struct fb_fix_screeninfo fix;	/* Current fix å›ºå®šå‚æ•°*/
 	struct fb_monspecs monspecs;	/* Current Monitor specs */
 	struct work_struct queue;	/* Framebuffer event queue */
 	struct fb_pixmap pixmap;	/* Image hardware mapper */
@@ -862,15 +862,15 @@ struct fb_info {
 	struct fb_deferred_io *fbdefio;
 #endif
 
-	struct fb_ops *fbops; //²Ù×÷·½·¨
+	struct fb_ops *fbops; //æ“ä½œæ–¹æ³•
 	struct device *device;		/* This is the parent */
 	struct device *dev;		/* This is this fb device */
 	int class_flag;                    /* private sysfs flags */
 #ifdef CONFIG_FB_TILEBLITTING
 	struct fb_tile_ops *tileops;    /* Tile Blitting */
 #endif
-	char __iomem *screen_base;	/* Virtual address ÄÚºËÏÔ´æĞéÄâµØÖ·*/
-	unsigned long screen_size;	/* Amount of ioremapped VRAM or 0 ĞéÄâÏÔ´æ´óĞ¡*/ 
+	char __iomem *screen_base;	/* Virtual address å†…æ ¸æ˜¾å­˜è™šæ‹Ÿåœ°å€*/
+	unsigned long screen_size;	/* Amount of ioremapped VRAM or 0 è™šæ‹Ÿæ˜¾å­˜å¤§å°*/ 
 	void *pseudo_palette;		/* Fake palette of 16 colors */ 
 #define FBINFO_STATE_RUNNING	0
 #define FBINFO_STATE_SUSPENDED	1

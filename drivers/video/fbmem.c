@@ -60,7 +60,7 @@ struct mutex registration_lock = { .count = ATOMIC_INIT(1) \
 static DEFINE_MUTEX(registration_lock);
 
 
-struct fb_info *registered_fb[FB_MAX] __read_mostly;			//cache.hÖĞÓĞ__read_mostlyµÄ¶¨Òå
+struct fb_info *registered_fb[FB_MAX] __read_mostly;			//cache.hä¸­æœ‰__read_mostlyçš„å®šä¹‰
 int num_registered_fb __read_mostly;
 
 static struct fb_info *get_fb_info(unsigned int idx)
@@ -68,13 +68,13 @@ static struct fb_info *get_fb_info(unsigned int idx)
 	struct fb_info *fb_info;
 
 	if (idx >= FB_MAX)
-		return ERR_PTR(-ENODEV);		//½«longÀàĞÍ×ª»»ÎªÖ¸ÕëÀàĞÍ
+		return ERR_PTR(-ENODEV);		//å°†longç±»å‹è½¬æ¢ä¸ºæŒ‡é’ˆç±»å‹
 
 	mutex_lock(&registration_lock);
-	//´ÓÊı×éÖĞÈ¡³öfb_info
+	//ä»æ•°ç»„ä¸­å–å‡ºfb_info
 	fb_info = registered_fb[idx];
 	if (fb_info)
-		atomic_inc(&fb_info->count);		//Ôö¼Ó´Ëfb_infoµÄÒıÓÃ
+		atomic_inc(&fb_info->count);		//å¢åŠ æ­¤fb_infoçš„å¼•ç”¨
 	mutex_unlock(&registration_lock);
 
 	return fb_info;
@@ -82,16 +82,16 @@ static struct fb_info *get_fb_info(unsigned int idx)
 
 static void put_fb_info(struct fb_info *fb_info)
 {
-	if (!atomic_dec_and_test(&fb_info->count))		//¼õ1
+	if (!atomic_dec_and_test(&fb_info->count))		//å‡1
 		return;
-	if (fb_info->fbops->fb_destroy)					//Ïú»Ù
+	if (fb_info->fbops->fb_destroy)					//é”€æ¯
 		fb_info->fbops->fb_destroy(fb_info);
 }
 
 int lock_fb_info(struct fb_info *info)
 {
 	mutex_lock(&info->lock);
-	if (!info->fbops) {				//µ± fb_info ²»´æÔÚ²Ù×÷·½·¨ fb_ops Ê±
+	if (!info->fbops) {				//å½“ fb_info ä¸å­˜åœ¨æ“ä½œæ–¹æ³• fb_ops æ—¶
 		mutex_unlock(&info->lock);
 		return 0;
 	}
@@ -1325,7 +1325,7 @@ static int fb_get_fscreeninfo(struct fb_info *info, unsigned int cmd,
 static long fb_compat_ioctl(struct file *file, unsigned int cmd,
 			    unsigned long arg)
 {
-	struct fb_info *info = file_fb_info(file);	//ÈÔÊÇÍ¨¹ıinodeµÄ´ÎÉè±¸ºÅÀ´»ñÈ¡µ½
+	struct fb_info *info = file_fb_info(file);	//ä»æ˜¯é€šè¿‡inodeçš„æ¬¡è®¾å¤‡å·æ¥è·å–åˆ°
 	struct fb_ops *fb;
 	long ret = -ENOIOCTLCMD;
 
@@ -1420,10 +1420,10 @@ fb_open(struct inode *inode, struct file *file)
 __acquires(&info->lock)
 __releases(&info->lock)
 {
-	int fbidx = iminor(inode);//»ñÈ¡´ÎÉè±¸ºÅ
+	int fbidx = iminor(inode);//è·å–æ¬¡è®¾å¤‡å·
 	struct fb_info *info;
 	int res = 0;
-	//»ñÈ¡µ×²ãµÄ½á¹¹Ìåfb_info
+	//è·å–åº•å±‚çš„ç»“æ„ä½“fb_info
 	info = get_fb_info(fbidx);
 	if (!info) {
 		request_module("fb%d", fbidx);
@@ -1439,7 +1439,7 @@ __releases(&info->lock)
 		res = -ENODEV;
 		goto out;
 	}
-	file->private_data = info;			//½«fb_info¸³Öµ¸øfileµÄË½ÓĞÊı¾İ
+	file->private_data = info;			//å°†fb_infoèµ‹å€¼ç»™fileçš„ç§æœ‰æ•°æ®
 	if (info->fbops->fb_open) {
 		res = info->fbops->fb_open(info,1);
 		if (res)
@@ -1782,11 +1782,11 @@ static int __init
 fbmem_init(void)
 {
 	proc_create("fb", 0, NULL, &fb_proc_fops);
-	//ÉêÇëÖ÷Éè±¸ºÅ£¬×¢²á²Ù×÷·½·¨
+	//ç”³è¯·ä¸»è®¾å¤‡å·ï¼Œæ³¨å†Œæ“ä½œæ–¹æ³•
 	if (register_chrdev(FB_MAJOR,"fb",&fb_fops))
 		printk("unable to get major %d for fb devs\n", FB_MAJOR);
 
-	//´´½¨Ò»¸öÉè±¸Àà
+	//åˆ›å»ºä¸€ä¸ªè®¾å¤‡ç±»
 	fb_class = class_create(THIS_MODULE, "graphics");
 	if (IS_ERR(fb_class)) {
 		printk(KERN_WARNING "Unable to create fb class; errno = %ld\n", PTR_ERR(fb_class));

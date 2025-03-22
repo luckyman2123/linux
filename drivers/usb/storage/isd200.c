@@ -1,7 +1,7 @@
 /* Transport & Protocol Driver for In-System Design, Inc. ISD200 ASIC
  *
  * Current development and maintenance:
- *   (C) 2001-2002 Björn Stenberg (bjorn@haxx.se)
+ *   (C) 2001-2002 Bj枚rn Stenberg (bjorn@haxx.se)
  *
  * Developed with the assistance of:
  *   (C) 2002 Alan Stern <stern@rowland.org>
@@ -61,7 +61,7 @@
 #include "scsiglue.h"
 
 MODULE_DESCRIPTION("Driver for In-System Design, Inc. ISD200 ASIC");
-MODULE_AUTHOR("Bj�rn Stenberg <bjorn@haxx.se>");
+MODULE_AUTHOR("Bj鰎n Stenberg <bjorn@haxx.se>");
 MODULE_LICENSE("GPL");
 
 static int isd200_Initialization(struct us_data *us);

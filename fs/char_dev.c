@@ -108,7 +108,7 @@ __register_chrdev_region(unsigned int major, unsigned int baseminor,
 	/* temporary */
 	if (major == 0) {
 		for (i = ARRAY_SIZE(chrdevs)-1; i > 0; i--) {
-			if (chrdevs[i] == NULL)		//设备号相关的全局指针数组
+			if (chrdevs[i] == NULL)		//璁惧鍙风浉鍏崇殑鍏ㄥ眬鎸囬拡鏁扮粍
 				break;
 		}
 

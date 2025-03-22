@@ -57,20 +57,20 @@ enum kobject_action {
 	KOBJ_MAX
 };
 
-//kobjectÊ¼ÖÕ´ú±ísysfsÎÄ¼şÏµÍ³ÖĞµÄÒ»¸öÄ¿Â¼,name³ÉÔ±Ö¸¶¨ÁËÄ¿Â¼Ãû,²»ÊÇÎÄ¼ş
-//ksetÊÇ¾ßÓĞÏàÍ¬ÀàĞÍµÄkobjectµÄ¼¯ºÏ,ÏñÇı¶¯³ÌĞò·ÅÔÚ/sys/driverÄ¿Â¼ÏÂÒ»Ñù,Ä¿Â¼driversÊÇÒ»¸ökset¶ÔÏó£¬°üº¬ÏµÍ³ÖĞÇı¶¯³ÌĞò¶ÔÓ¦µÄÄ¿Â¼£¬Çı¶¯³ÌĞòµÄÄ¿Â¼ÓĞkboject±íÊ¾
-//¡£ÄÚºË½«ÏàËÆµÄkboject½á¹¹Á¬½ÓÔÚkset¼¯ºÏÖĞ¡£
+//kobjectå§‹ç»ˆä»£è¡¨sysfsæ–‡ä»¶ç³»ç»Ÿä¸­çš„ä¸€ä¸ªç›®å½•,nameæˆå‘˜æŒ‡å®šäº†ç›®å½•å,ä¸æ˜¯æ–‡ä»¶
+//ksetæ˜¯å…·æœ‰ç›¸åŒç±»å‹çš„kobjectçš„é›†åˆ,åƒé©±åŠ¨ç¨‹åºæ”¾åœ¨/sys/driverç›®å½•ä¸‹ä¸€æ ·,ç›®å½•driversæ˜¯ä¸€ä¸ªksetå¯¹è±¡ï¼ŒåŒ…å«ç³»ç»Ÿä¸­é©±åŠ¨ç¨‹åºå¯¹åº”çš„ç›®å½•ï¼Œé©±åŠ¨ç¨‹åºçš„ç›®å½•æœ‰kbojectè¡¨ç¤º
+//ã€‚å†…æ ¸å°†ç›¸ä¼¼çš„kbojectç»“æ„è¿æ¥åœ¨kseté›†åˆä¸­ã€‚
 
 
 
 struct kobject {
-	const char		*name;			//kobjectµÄÃû³Æ,kobjectÔÚsysfsÖĞµÄÃû×Ö
-	struct list_head	entry;		//Ë«ÏòÁ´±í
-	struct kobject		*parent;	//kobjectµÄ¸¸Àà,kobjectµÄ¸¸½Úµã
-	struct kset		*kset;			//kobjectËùÊôµÄkset, kset¶ÔÓ¦µÄÒ²ÊÇ/sysÏÂµÄÒ»¸öÄ¿Â¼
-	struct kobj_type	*ktype;		//kobjectµÄÀàĞÍĞÅÏ¢,ÊôĞÔ,ÊôĞÔÓÃÎÄ¼şÀ´±íÊ¾, ·ÅÔÚkobject¶ÔÓ¦Ä¿Â¼ÏÂ
+	const char		*name;			//kobjectçš„åç§°,kobjectåœ¨sysfsä¸­çš„åå­—
+	struct list_head	entry;		//åŒå‘é“¾è¡¨
+	struct kobject		*parent;	//kobjectçš„çˆ¶ç±»,kobjectçš„çˆ¶èŠ‚ç‚¹
+	struct kset		*kset;			//kobjectæ‰€å±çš„kset, ksetå¯¹åº”çš„ä¹Ÿæ˜¯/sysä¸‹çš„ä¸€ä¸ªç›®å½•
+	struct kobj_type	*ktype;		//kobjectçš„ç±»å‹ä¿¡æ¯,å±æ€§,å±æ€§ç”¨æ–‡ä»¶æ¥è¡¨ç¤º, æ”¾åœ¨kobjectå¯¹åº”ç›®å½•ä¸‹
 	struct sysfs_dirent	*sd;		//
-	struct kref		kref;			//ÒıÓÃ´ÎÊı
+	struct kref		kref;			//å¼•ç”¨æ¬¡æ•°
 	unsigned int state_initialized:1;
 	unsigned int state_in_sysfs:1;
 	unsigned int state_add_uevent_sent:1;
@@ -165,11 +165,11 @@ struct sock;
  * desired.
  */
 
-//Ò»×ékobjectsÁĞ±í 
+//ä¸€ç»„kobjectsåˆ—è¡¨ 
 struct kset {
-	struct list_head list;			//kobjectsÁĞ±í
+	struct list_head list;			//kobjectsåˆ—è¡¨
 	spinlock_t list_lock;
-	struct kobject kobj;			//kset±¾ÉíÒ²ÊÇÒ»¸ökobject
+	struct kobject kobj;			//ksetæœ¬èº«ä¹Ÿæ˜¯ä¸€ä¸ªkobject
 	const struct kset_uevent_ops *uevent_ops;	
 };
 

@@ -40,9 +40,9 @@
 
 /* These are for everybody (although not all archs will actually
    discard it in modules) */
-// comment by clark __section(.init.text) : Õâ¸ö Section ÔÚÄÚºËÍê³É³õÊ¼»¯Ö®ºó£¬¾Í»á±»ÊÍ·Åµô
+// comment by clark __section(.init.text) : è¿™ä¸ª Section åœ¨å†…æ ¸å®Œæˆåˆå§‹åŒ–ä¹‹åï¼Œå°±ä¼šè¢«é‡Šæ”¾æ‰
 #define __init		__section(.init.text) __cold notrace
-// comment by clark __section(.init.data) Õâ¸öSection ÔÚÄÚºËÍê³É³õÊ¼»¯Ö®ºó£¬»áÊÍ·Åµô¡£
+// comment by clark __section(.init.data) è¿™ä¸ªSection åœ¨å†…æ ¸å®Œæˆåˆå§‹åŒ–ä¹‹åï¼Œä¼šé‡Šæ”¾æ‰ã€‚
 #define __initdata	__section(.init.data)
 #define __initconst	__section(.init.rodata)
 #define __exitdata	__section(.exit.data)

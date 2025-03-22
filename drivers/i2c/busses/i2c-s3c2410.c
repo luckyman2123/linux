@@ -76,7 +76,7 @@ struct s3c24xx_i2c {
 	struct clk		*clk;
 	struct device		*dev;
 	struct resource		*ioarea;
-	struct i2c_adapter	adap; //ÊÊÅäÆ÷¶ÔÏó
+	struct i2c_adapter	adap; //é€‚é…å™¨å¯¹è±¡
 
 #ifdef CONFIG_CPU_FREQ
 	struct notifier_block	freq_transition;
@@ -582,7 +582,7 @@ static u32 s3c24xx_i2c_func(struct i2c_adapter *adap)
 /* i2c bus registration info */
 
 static const struct i2c_algorithm s3c24xx_i2c_algorithm = {
-	.master_xfer		= s3c24xx_i2c_xfer,//ÕæÕıÓÃi2cĞ­ÒéÀ´ÊÕ·¢Êı¾İµÄº¯ÊıÉÏ²ã×îÖÕµ÷ÓÃËü
+	.master_xfer		= s3c24xx_i2c_xfer,//çœŸæ­£ç”¨i2cåè®®æ¥æ”¶å‘æ•°æ®çš„å‡½æ•°ä¸Šå±‚æœ€ç»ˆè°ƒç”¨å®ƒ
 	.functionality		= s3c24xx_i2c_func,
 };
 
@@ -792,12 +792,12 @@ static int s3c24xx_i2c_init(struct s3c24xx_i2c *i2c)
 
 static int s3c24xx_i2c_probe(struct platform_device *pdev)
 {
-	struct s3c24xx_i2c *i2c;//±¾µØ¶ÔÏó°üº¬ÁËi2c_adapter¶ÔÏó
-	struct s3c2410_platform_i2c *pdata;//i2cÆ½Ì¨Êı¾İ¶ÔÏó
+	struct s3c24xx_i2c *i2c;//æœ¬åœ°å¯¹è±¡åŒ…å«äº†i2c_adapterå¯¹è±¡
+	struct s3c2410_platform_i2c *pdata;//i2cå¹³å°æ•°æ®å¯¹è±¡
 	struct resource *res;
 	int ret;
 	printk("<kernel>call %s\n",__FUNCTION__);
-	pdata = pdev->dev.platform_data;//»ñÈ¡Æ½Ì¨Êı¾İ
+	pdata = pdev->dev.platform_data;//è·å–å¹³å°æ•°æ®
 	if (!pdata) {
 		dev_err(&pdev->dev, "no platform data\n");
 		return -EINVAL;
@@ -811,7 +811,7 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 
 	strlcpy(i2c->adap.name, "s3c2410-i2c", sizeof(i2c->adap.name));
 	i2c->adap.owner   = THIS_MODULE;
-	i2c->adap.algo    = &s3c24xx_i2c_algorithm;//ÉèÖÃi2c_adapter¶ÔÏó
+	i2c->adap.algo    = &s3c24xx_i2c_algorithm;//è®¾ç½®i2c_adapterå¯¹è±¡
 	i2c->adap.retries = 2;
 	i2c->adap.class   = I2C_CLASS_HWMON | I2C_CLASS_SPD;
 	i2c->tx_setup     = 50;
@@ -831,10 +831,10 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "clock source %p\n", i2c->clk);
 
-	clk_enable(i2c->clk);//Ê¹ÄÜi2cÊ±ÖÓ
+	clk_enable(i2c->clk);//ä½¿èƒ½i2cæ—¶é’Ÿ
 
 	/* map the registers */
-	//»ñÈ¡io×ÊÔ´
+	//è·å–ioèµ„æº
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		dev_err(&pdev->dev, "cannot find IO resource\n");
@@ -850,7 +850,7 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 		ret = -ENXIO;
 		goto err_clk;
 	}
-	//Ó³Éäio×ÊÔ´
+	//æ˜ å°„ioèµ„æº
 	i2c->regs = ioremap(res->start, resource_size(res));
 
 	if (i2c->regs == NULL) {
@@ -869,20 +869,20 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 
 	/* initialise the i2c controller */
 
-	ret = s3c24xx_i2c_init(i2c);//³õÊ¼»¯i2c¿ØÖÆÆ÷¶ÔÏó
+	ret = s3c24xx_i2c_init(i2c);//åˆå§‹åŒ–i2cæ§åˆ¶å™¨å¯¹è±¡
 	if (ret != 0)
 		goto err_iomap;
 
 	/* find the IRQ for this unit (note, this relies on the init call to
 	 * ensure no current IRQs pending
 	 */
-	//»ñÈ¡ÖĞ¶Ï×ÊÔ´
+	//è·å–ä¸­æ–­èµ„æº
 	i2c->irq = ret = platform_get_irq(pdev, 0);
 	if (ret <= 0) {
 		dev_err(&pdev->dev, "cannot find IRQ\n");
 		goto err_iomap;
 	}
-	//×¢²áÖĞ¶Ï
+	//æ³¨å†Œä¸­æ–­
 	ret = request_irq(i2c->irq, s3c24xx_i2c_irq, IRQF_DISABLED,
 			  dev_name(&pdev->dev), i2c);
 
@@ -897,7 +897,7 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	/* Note, previous versions of the driver used i2c_add_adapter() ÕâÊÇÀÏ°æ±¾
+	/* Note, previous versions of the driver used i2c_add_adapter() è¿™æ˜¯è€ç‰ˆæœ¬
 	 * to add the bus at any number. We now pass the bus number via
 	 * the platform data, so if unset it will now default to always
 	 * being bus 0.
@@ -906,7 +906,7 @@ static int s3c24xx_i2c_probe(struct platform_device *pdev)
 	 */
 
 	i2c->adap.nr = pdata->bus_num;
-	//×¢²áÊÊÅäÆ÷
+	//æ³¨å†Œé€‚é…å™¨
 	ret = i2c_add_numbered_adapter(&i2c->adap);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to add bus to i2c core\n");

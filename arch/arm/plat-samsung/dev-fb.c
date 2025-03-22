@@ -26,7 +26,7 @@
 #include <plat/cpu.h>
 #include <../../../drivers/video/samsung/s3cfb.h>
 #include <mach/media.h>
-#if 1    //ÄÚºË»ù±¾´úÂë
+#if 1    //å†…æ ¸åŸºæœ¬ä»£ç 
 static struct resource s3c_fb_resource[] = {
 	[0] = {
 		.start = S3C_PA_FB,
@@ -149,8 +149,8 @@ void __init s3c_fb_set_platdata(struct s3c_platform_fb *pd)
                 frame_size = (lcd->width * lcd->height * 4);
 
                 s3cfb_get_clk_name(npd->clk_name);
-                //npd->backlight_onoff = NULL;//±³¹âÉèÖÃ
-                npd->clk_on = s3cfb_clk_on;//Ê±ÖÓÉèÖÃ
+                //npd->backlight_onoff = NULL;//èƒŒå…‰è®¾ç½®
+                npd->clk_on = s3cfb_clk_on;//æ—¶é’Ÿè®¾ç½®
                 npd->clk_off = s3cfb_clk_off;
 
                 /* set starting physical address & size of memory region for overlay
