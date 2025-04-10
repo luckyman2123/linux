@@ -56,8 +56,6 @@ int s3c_irq_wake(struct irq_data *data, unsigned int state)
 }
 
 static struct sleep_save eint_save[] = {
-
-#if TO_DO
 	SAVE_ITEM(S5P_EINT_CON(0)),
 	SAVE_ITEM(S5P_EINT_CON(1)),
 	SAVE_ITEM(S5P_EINT_CON(2)),
@@ -76,7 +74,6 @@ static struct sleep_save eint_save[] = {
 	SAVE_ITEM(S5P_EINT_MASK(1)),
 	SAVE_ITEM(S5P_EINT_MASK(2)),
 	SAVE_ITEM(S5P_EINT_MASK(3)),
-#endif
 };
 
 int s3c24xx_irq_suspend(void)

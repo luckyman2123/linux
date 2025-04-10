@@ -18,7 +18,6 @@
 #include <linux/delay.h>
 #include <linux/serial_core.h>
 #include <linux/io.h>
-#include <linux/console.h>
 
 #include <asm/cacheflush.h>
 #include <mach/hardware.h>
@@ -72,7 +71,7 @@ static inline void s3c_pm_debug_init(void)
 
 unsigned char pm_uart_udivslot;
 
-
+#ifdef CONFIG_SAMSUNG_PM_DEBUG
 
 struct pm_uart_save uart_save[CONFIG_SERIAL_SAMSUNG_UARTS];
 
@@ -123,27 +122,13 @@ static void s3c_pm_restore_uarts(void)
 	struct pm_uart_save *save = uart_save;
 	unsigned int uart;
 
-	if (console_suspend_enabled == 0)
-		for (uart = 0; uart < CONFIG_SERIAL_SAMSUNG_UARTS; uart++, save++) {
-			if ( uart == CONFIG_S3C_LOWLEVEL_UART_PORT)
-				s3c_pm_restore_uart(uart, save);
-		}
+	for (uart = 0; uart < CONFIG_SERIAL_SAMSUNG_UARTS; uart++, save++)
+		s3c_pm_restore_uart(uart, save);
 }
-
-static void s3c_pm_clear_uarts(void) 
-{ 
-	unsigned int uart;
-	for (uart = 0; uart < CONFIG_SERIAL_SAMSUNG_UARTS; uart++) {
-		void __iomem *regs = S3C_VA_UARTx(uart);
-		__raw_writel(0, regs + S3C2410_ULCON);
-		__raw_writel(0,  regs + S3C2410_UCON);
-		__raw_writel(0, regs + S3C2410_UFCON);
-		__raw_writel(0, regs + S3C2410_UMCON);
-		__raw_writel(0, regs + S3C2410_UBRDIV);
-		__raw_writel(0xf, regs + S3C64XX_UINTSP);
-		__raw_writel(0xf, regs + S3C64XX_UINTP);
-	}
-}
+#else
+static void s3c_pm_save_uarts(void) { }
+static void s3c_pm_restore_uarts(void) { }
+#endif
 
 /* The IRQ ext-int code goes here, it is too small to currently bother
  * with its own file. */
@@ -277,7 +262,7 @@ static int s3c_pm_enter(suspend_state_t state)
 	    !any_allowed(s3c_irqwake_eintmask, s3c_irqwake_eintallow)) {
 		printk(KERN_ERR "%s: No wake-up sources!\n", __func__);
 		printk(KERN_ERR "%s: Aborting sleep\n", __func__);
-//		return -EINVAL;
+		return -EINVAL;
 	}
 
 	/* save all necessary core registers not covered by the drivers */
@@ -321,9 +306,8 @@ static int s3c_pm_enter(suspend_state_t state)
 
 	/* restore the system state */
 
-	s3c_pm_clear_uarts();
-	s3c_pm_restore_uarts();
 	s3c_pm_restore_core();
+	s3c_pm_restore_uarts();
 	s3c_pm_restore_gpios();
 
 	s3c_pm_debug_init();

@@ -749,13 +749,12 @@ config ARCH_S5PV210
 	bool "Samsung S5PV210/S5PC110"
 	select CPU_V7
 	select ARCH_SPARSEMEM_ENABLE
-	select ARCH_HAS_HOLES_MEMORYMODEL
 	select GENERIC_GPIO
 	select HAVE_CLK
 	select ARM_L1_CACHE_SHIFT_6
 	select ARCH_HAS_CPUFREQ
 	select GENERIC_CLOCKEVENTS
-	select HAVE_SCHED_CLOCK if !S5P_HIGH_RES_TIMERS
+	select HAVE_SCHED_CLOCK
 	select HAVE_S3C2410_I2C if I2C
 	select HAVE_S3C_RTC if RTC_CLASS
 	select HAVE_S3C2410_WATCHDOG if WATCHDOG
@@ -1685,15 +1684,6 @@ config DEPRECATED_PARAM_STRUCT
 	help
 	  This was deprecated in 2001 and announced to live on for 5 years.
 	  Some old boot loaders still use this way.
-
-config ARM_FLUSH_CONSOLE_ON_RESTART
-	bool "Force flush the console on restart"
-	help
-	  If the console is locked while the system is rebooted, the messages
-	  in the temporary logbuffer would not have propogated to all the
-	  console drivers. This option forces the console lock to be
-	  released if it failed to be acquired, which will cause all the
-	  pending messages to be flushed.
 
 endmenu
 

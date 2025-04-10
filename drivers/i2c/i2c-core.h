@@ -18,10 +18,10 @@
 
 #include <linux/rwsem.h>
 
-struct i2c_devinfo {//i2c设备信息结构体
+struct i2c_devinfo {
 	struct list_head	list;
-	int			busnum;//总线号码
-	struct i2c_board_info	board_info;//i2c板子信息结构体
+	int			busnum;
+	struct i2c_board_info	board_info;
 };
 
 /* board_lock protects board_list and first_dynamic_bus_num.

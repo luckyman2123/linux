@@ -143,9 +143,7 @@ void ftrace_likely_update(struct ftrace_branch_data *f, int val, int expect);
 #endif /* CONFIG_PROFILE_ALL_BRANCHES */
 
 #else
-// comment by clark :: likely(x)等价于x，即if(likely(x))等价于if(x)，但是它告诉gcc，x取1的可能性比较大。
-# define likely(x)	__builtin_expect(!!(x), 1)	
-// comment by clark :: unlikely(x)等价于x，即if(unlikely(x))等价于if(x)，但是它告诉gcc，x取0的可能性比较大。
+# define likely(x)	__builtin_expect(!!(x), 1)
 # define unlikely(x)	__builtin_expect(!!(x), 0)
 #endif
 

@@ -42,25 +42,8 @@
 
 #define FBPIXMAPSIZE	(1024 * 8)
 
-
-/*
-#define LIST_HEAD_INIT(name) { &(name), &(name) }
-
-
-#define DEFINE_MUTEX(mutexname) \
-	struct mutex mutexname = __MUTEX_INITIALIZER(mutexname)
-
-struct mutex registration_lock = { .count = ATOMIC_INIT(1) \
-		, .wait_lock = __SPIN_LOCK_UNLOCKED(registration_lock.wait_lock) \
-		, .wait_list = LIST_HEAD_INIT(registration_lock.wait_list) \
-		, .magic = &registration_lock
-		, .dep_map = { .name = registration_lock } }
-*/
-
 static DEFINE_MUTEX(registration_lock);
-
-
-struct fb_info *registered_fb[FB_MAX] __read_mostly;			//cache.h中有__read_mostly的定义
+struct fb_info *registered_fb[FB_MAX] __read_mostly;
 int num_registered_fb __read_mostly;
 
 static struct fb_info *get_fb_info(unsigned int idx)
@@ -68,13 +51,12 @@ static struct fb_info *get_fb_info(unsigned int idx)
 	struct fb_info *fb_info;
 
 	if (idx >= FB_MAX)
-		return ERR_PTR(-ENODEV);		//将long类型转换为指针类型
+		return ERR_PTR(-ENODEV);
 
 	mutex_lock(&registration_lock);
-	//从数组中取出fb_info
 	fb_info = registered_fb[idx];
 	if (fb_info)
-		atomic_inc(&fb_info->count);		//增加此fb_info的引用
+		atomic_inc(&fb_info->count);
 	mutex_unlock(&registration_lock);
 
 	return fb_info;
@@ -82,16 +64,16 @@ static struct fb_info *get_fb_info(unsigned int idx)
 
 static void put_fb_info(struct fb_info *fb_info)
 {
-	if (!atomic_dec_and_test(&fb_info->count))		//减1
+	if (!atomic_dec_and_test(&fb_info->count))
 		return;
-	if (fb_info->fbops->fb_destroy)					//销毁
+	if (fb_info->fbops->fb_destroy)
 		fb_info->fbops->fb_destroy(fb_info);
 }
 
 int lock_fb_info(struct fb_info *info)
 {
 	mutex_lock(&info->lock);
-	if (!info->fbops) {				//当 fb_info 不存在操作方法 fb_ops 时
+	if (!info->fbops) {
 		mutex_unlock(&info->lock);
 		return 0;
 	}
@@ -1325,7 +1307,7 @@ static int fb_get_fscreeninfo(struct fb_info *info, unsigned int cmd,
 static long fb_compat_ioctl(struct file *file, unsigned int cmd,
 			    unsigned long arg)
 {
-	struct fb_info *info = file_fb_info(file);	//仍是通过inode的次设备号来获取到
+	struct fb_info *info = file_fb_info(file);
 	struct fb_ops *fb;
 	long ret = -ENOIOCTLCMD;
 
@@ -1420,10 +1402,10 @@ fb_open(struct inode *inode, struct file *file)
 __acquires(&info->lock)
 __releases(&info->lock)
 {
-	int fbidx = iminor(inode);//获取次设备号
+	int fbidx = iminor(inode);
 	struct fb_info *info;
 	int res = 0;
-	//获取底层的结构体fb_info
+
 	info = get_fb_info(fbidx);
 	if (!info) {
 		request_module("fb%d", fbidx);
@@ -1439,7 +1421,7 @@ __releases(&info->lock)
 		res = -ENODEV;
 		goto out;
 	}
-	file->private_data = info;			//将fb_info赋值给file的私有数据
+	file->private_data = info;
 	if (info->fbops->fb_open) {
 		res = info->fbops->fb_open(info,1);
 		if (res)
@@ -1782,11 +1764,10 @@ static int __init
 fbmem_init(void)
 {
 	proc_create("fb", 0, NULL, &fb_proc_fops);
-	//申请主设备号，注册操作方法
+
 	if (register_chrdev(FB_MAJOR,"fb",&fb_fops))
 		printk("unable to get major %d for fb devs\n", FB_MAJOR);
 
-	//创建一个设备类
 	fb_class = class_create(THIS_MODULE, "graphics");
 	if (IS_ERR(fb_class)) {
 		printk(KERN_WARNING "Unable to create fb class; errno = %ld\n", PTR_ERR(fb_class));

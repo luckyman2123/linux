@@ -146,8 +146,8 @@ static void kobject_init_internal(struct kobject *kobj)
 {
 	if (!kobj)
 		return;
-	kref_init(&kobj->kref);				//引用计数设置为1
-	INIT_LIST_HEAD(&kobj->entry);		//kset通过链接entry找到kobj
+	kref_init(&kobj->kref);
+	INIT_LIST_HEAD(&kobj->entry);
 	kobj->state_in_sysfs = 0;
 	kobj->state_add_uevent_sent = 0;
 	kobj->state_remove_uevent_sent = 0;
@@ -244,12 +244,12 @@ int kobject_set_name_vargs(struct kobject *kobj, const char *fmt,
  */
 int kobject_set_name(struct kobject *kobj, const char *fmt, ...)
 {
-	va_list vargs;			//参数列表  Clark
+	va_list vargs;
 	int retval;
 
-	va_start(vargs, fmt);		// 通过fmt来获取到vargs Clark
+	va_start(vargs, fmt);
 	retval = kobject_set_name_vargs(kobj, fmt, vargs);
-	va_end(vargs);				// 结束 vargs
+	va_end(vargs);
 
 	return retval;
 }

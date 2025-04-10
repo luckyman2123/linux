@@ -81,7 +81,7 @@ static int samsung_keypad_is_s5pv210(struct device *dev)
 	enum samsung_keypad_type type =
 		platform_get_device_id(pdev)->driver_data;
 
-	return type == KEYPAD_TYPE_SAMSUNG;
+	return type == KEYPAD_TYPE_S5PV210;
 }
 
 static void samsung_keypad_scan(struct samsung_keypad *keypad,
@@ -101,7 +101,6 @@ static void samsung_keypad_scan(struct samsung_keypad *keypad,
 		}
 
 		writel(val, keypad->base + SAMSUNG_KEYIFCOL);
-
 		mdelay(1);
 
 		val = readl(keypad->base + SAMSUNG_KEYIFROW);
@@ -139,11 +138,10 @@ static bool samsung_keypad_report(struct samsung_keypad *keypad,
 				pressed ? "pressed" : "released", row, col);
 
 			val = MATRIX_SCAN_CODE(row, col, keypad->row_shift);
-			if(keypad->keycodes[val] != KEY_RESERVED) {
-				input_event(input_dev, EV_MSC, MSC_SCAN, val);
-				input_report_key(input_dev, 
-						keypad->keycodes[val], pressed);
-			}
+
+			input_event(input_dev, EV_MSC, MSC_SCAN, val);
+			input_report_key(input_dev,
+					keypad->keycodes[val], pressed);
 		}
 		input_sync(keypad->input_dev);
 	}
@@ -430,8 +428,7 @@ static int samsung_keypad_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct samsung_keypad *keypad = platform_get_drvdata(pdev);
 	struct input_dev *input_dev = keypad->input_dev;
-	/* Randomly selected val of row 1 col 4 for keyval*/
-	unsigned int wakeup_key = 12; 
+
 	mutex_lock(&input_dev->mutex);
 
 	samsung_keypad_toggle_wakeup(keypad, false);
@@ -440,10 +437,6 @@ static int samsung_keypad_resume(struct device *dev)
 		samsung_keypad_start(keypad);
 
 	mutex_unlock(&input_dev->mutex);
-
-	/* Sending a dummy event so that Android can wakeup */	
-        input_report_key(input_dev,keypad->keycodes[wakeup_key], 1);
-	input_sync(input_dev);
 
 	return 0;
 }
@@ -459,7 +452,7 @@ static struct platform_device_id samsung_keypad_driver_ids[] = {
 		.name		= "samsung-keypad",
 		.driver_data	= KEYPAD_TYPE_SAMSUNG,
 	}, {
-		.name		= "s3c-keypad",
+		.name		= "s5pv210-keypad",
 		.driver_data	= KEYPAD_TYPE_S5PV210,
 	},
 	{ },
@@ -470,7 +463,7 @@ static struct platform_driver samsung_keypad_driver = {
 	.probe		= samsung_keypad_probe,
 	.remove		= __devexit_p(samsung_keypad_remove),
 	.driver		= {
-		.name	= "s3c-keypad",
+		.name	= "samsung-keypad",
 		.owner	= THIS_MODULE,
 #ifdef CONFIG_PM
 		.pm	= &samsung_keypad_pm_ops,

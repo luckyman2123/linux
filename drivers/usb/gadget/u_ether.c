@@ -249,13 +249,11 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 		goto enomem;
 	}
 
-#ifndef CONFIG_USB_ANDROID_RNDIS_DWORD_ALIGNED
 	/* Some platforms perform better when IP packets are aligned,
 	 * but on at least one, checksumming fails otherwise.  Note:
 	 * RNDIS headers involve variable numbers of LE32 values.
 	 */
 	skb_reserve(skb, NET_IP_ALIGN);
-#endif
 
 	req->buf = skb->data;
 	req->length = size;
@@ -485,10 +483,7 @@ static void tx_complete(struct usb_ep *ep, struct usb_request *req)
 	list_add(&req->list, &dev->tx_reqs);
 	spin_unlock(&dev->req_lock);
 	dev_kfree_skb_any(skb);
-#ifdef CONFIG_USB_ANDROID_RNDIS_DWORD_ALIGNED
-	if (req->buf != skb->data)
-		kfree(req->buf);
-#endif
+
 	atomic_dec(&dev->tx_qlen);
 	if (netif_carrier_ok(dev->net))
 		netif_wake_queue(dev->net);
@@ -582,21 +577,7 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 
 		length = skb->len;
 	}
-
-#ifdef CONFIG_USB_ANDROID_RNDIS_DWORD_ALIGNED
-    if ((int)skb->data & 3) {
-		req->buf = kmalloc(skb->len, GFP_ATOMIC);
-		if (!req->buf)
-			goto drop;
-		memcpy((void *)req->buf, (void *)skb->data, skb->len);
-	}
-	else {
-		req->buf = skb->data;
-	}
-#else
 	req->buf = skb->data;
-#endif
-
 	req->context = skb;
 	req->complete = tx_complete;
 
@@ -637,10 +618,6 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 		dev_kfree_skb_any(skb);
 drop:
 		dev->net->stats.tx_dropped++;
-#ifdef CONFIG_USB_ANDROID_RNDIS_DWORD_ALIGNED
-		if (req->buf != skb->data)
-			kfree(req->buf);
-#endif
 		spin_lock_irqsave(&dev->req_lock, flags);
 		if (list_empty(&dev->tx_reqs))
 			netif_start_queue(net);
@@ -788,26 +765,6 @@ static struct device_type gadget_type = {
  */
 int gether_setup(struct usb_gadget *g, u8 ethaddr[ETH_ALEN])
 {
-	return gether_setup_name(g, ethaddr, "usb");
-}
-
-/**
- * gether_setup_name - initialize one ethernet-over-usb link
- * @g: gadget to associated with these links
- * @ethaddr: NULL, or a buffer in which the ethernet address of the
- *	host side of the link is recorded
- * @netname: name for network device (for example, "usb")
- * Context: may sleep
- *
- * This sets up the single network link that may be exported by a
- * gadget driver using this framework.  The link layer addresses are
- * set up using module parameters.
- *
- * Returns negative errno, or zero on success
- */
-int gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
-		const char *netname)
-{
 	struct eth_dev		*dev;
 	struct net_device	*net;
 	int			status;
@@ -830,7 +787,7 @@ int gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
 
 	/* network device setup */
 	dev->net = net;
-	snprintf(net->name, sizeof(net->name), "%s%%d", netname);
+	strcpy(net->name, "usb%d");
 
 	if (get_ether_addr(dev_addr, net->dev_addr))
 		dev_warn(&g->dev,
@@ -986,6 +943,7 @@ void gether_disconnect(struct gether *link)
 	struct eth_dev		*dev = link->ioport;
 	struct usb_request	*req;
 
+	WARN_ON(!dev);
 	if (!dev)
 		return;
 
