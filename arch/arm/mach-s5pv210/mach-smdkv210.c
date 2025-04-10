@@ -46,6 +46,89 @@
 #include <plat/fb.h>
 #include <plat/s5p-time.h>
 
+
+#ifdef CONFIG_MTD_NAND
+#include <linux/mtd/mtd.h>
+#include <linux/mtd/nand.h>
+#include <linux/mtd/nand_ecc.h>
+#include <linux/mtd/partitions.h>
+#include <plat/nand.h>
+#endif
+
+
+#ifdef CONFIG_MTD_NAND
+
+#if 0
+static struct mtd_partition s5pv210_partition_info[] = {
+			[0] = {
+			.name		= "Bootloader",
+			.offset		= 0,
+			.size		= SZ_1M,
+			},
+			[1] = {
+			.name		= "Kernel",
+			.offset		= MTDPART_OFS_APPEND,
+			.size		= SZ_1M * 3,
+			},
+			[2] = {
+			.name		= "Rootfs",
+			 .offset		= MTDPART_OFS_APPEND,
+			 .size		= SZ_8M,
+			},
+			[3] = {
+			.name		= "Userfs",
+			 .offset		= MTDPART_OFS_APPEND,
+			 .size		= SZ_16M,
+			},
+			 [4] = {
+			.name		= "Userdata",
+			.offset		= MTDPART_OFS_APPEND,
+			.size		= MTDPART_SIZ_FULL,
+			},
+};
+struct s3c_nand_mtd_info s5pv210_nand_info = {
+		 .chip_nr = 1,
+		 .mtd_part_nr = ARRAY_SIZE(s5pv210_partition_info),
+		 .partition = s5pv210_partition_info
+ };
+
+struct resource s5pv210_nand_resource[] = {
+		 [0] = {
+		 .start 	= 0xB0E00000,
+		 .end	= 0xB0E00000 + SZ_1M,
+		 .flags	= IORESOURCE_MEM,
+		 },
+ };
+struct platform_device s5pv210_device_nand = {
+		 .name	= "s5pv210-nand",
+		 .id		= -1,
+		 .num_resources = ARRAY_SIZE(s5pv210_nand_resource),
+		 .resource = s5pv210_nand_resource,
+		 .dev	= {
+		 .platform_data = &s5pv210_nand_info,
+		 },
+};
+
+#else
+/* NAND Controller */
+static struct resource s3c_nand_resource[] = {
+	[0] = {
+		.start	= 0xB0E00000,
+		.end	= 0xB0E00000 + SZ_1M - 1,
+		.flags	= IORESOURCE_MEM,
+	}
+};
+
+struct platform_device s5pv210_device_nand = {
+	.name		= "s5pv210-nand",
+	.id		= -1,    
+	.num_resources	= ARRAY_SIZE(s3c_nand_resource),
+	.resource	= s3c_nand_resource,
+};
+#endif
+
+#endif
+ 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKV210_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -115,21 +198,23 @@ static struct samsung_keypad_platdata smdkv210_keypad_data __initdata = {
 };
 
 static struct resource smdkv210_dm9000_resources[] = {
+
 	[0] = {
-		.start	= S5PV210_PA_SROM_BANK5,
-		.end	= S5PV210_PA_SROM_BANK5,
+		.start	= 0x88000000,
+		.end	= 0x88000000 + 0x3,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= S5PV210_PA_SROM_BANK5 + 2,
-		.end	= S5PV210_PA_SROM_BANK5 + 2,
+		.start	= 0x88000000 + 0x4,
+		.end	= 0x88000000 + 0x4 + 0x3,
 		.flags	= IORESOURCE_MEM,
 	},
 	[2] = {
-		.start	= IRQ_EINT(9),
-		.end	= IRQ_EINT(9),
+		.start	= IRQ_EINT(10),
+		.end	= IRQ_EINT(10),
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
 	},
+
 };
 
 static struct dm9000_plat_data smdkv210_dm9000_platdata = {
@@ -190,12 +275,12 @@ static struct platform_device smdkv210_lcd_lte480wv = {
 
 static struct s3c_fb_pd_win smdkv210_fb_win0 = {
 	.win_mode = {
-		.left_margin	= 13,
+		.left_margin	= 27,
 		.right_margin	= 8,
-		.upper_margin	= 7,
+		.upper_margin	= 17,
 		.lower_margin	= 5,
-		.hsync_len	= 3,
-		.vsync_len	= 1,
+		.hsync_len	= 10,
+		.vsync_len	= 10,
 		.xres		= 800,
 		.yres		= 480,
 	},
@@ -272,23 +357,27 @@ static struct platform_device *smdkv210_devices[] __initdata = {
 	&smdkv210_lcd_lte480wv,
 	&s3c_device_timer[3],
 	&smdkv210_backlight_device,
+	#if defined(CONFIG_MTD_NAND_S3C)
+		&s5pv210_device_nand,
+	#endif
 };
 
 static void __init smdkv210_dm9000_init(void)
 {
-	unsigned int tmp;
 
-	gpio_request(S5PV210_MP01(5), "nCS5");
-	s3c_gpio_cfgpin(S5PV210_MP01(5), S3C_GPIO_SFN(2));
-	gpio_free(S5PV210_MP01(5));
+	unsigned int tmp;
+	gpio_request(S5PV210_MP01(1), "nCS1");
+	s3c_gpio_cfgpin(S5PV210_MP01(1), S3C_GPIO_SFN(2));
+	gpio_free(S5PV210_MP01(1));
 
 	tmp = (5 << S5P_SROM_BCX__TACC__SHIFT);
-	__raw_writel(tmp, S5P_SROM_BC5);
+	__raw_writel(tmp, S5P_SROM_BC1);
 
 	tmp = __raw_readl(S5P_SROM_BW);
-	tmp &= (S5P_SROM_BW__CS_MASK << S5P_SROM_BW__NCS5__SHIFT);
-	tmp |= (1 << S5P_SROM_BW__NCS5__SHIFT);
+	tmp &= (S5P_SROM_BW__CS_MASK << S5P_SROM_BW__NCS1__SHIFT);
+	tmp |= (1 << S5P_SROM_BW__NCS1__SHIFT);
 	__raw_writel(tmp, S5P_SROM_BW);
+	
 }
 
 static struct i2c_board_info smdkv210_i2c_devs0[] __initdata = {
@@ -323,6 +412,10 @@ static void __init smdkv210_machine_init(void)
 	s3c_pm_init();
 
 	smdkv210_dm9000_init();
+
+	gpio_request(S5PV210_GPD0(0), "GPD0");
+	gpio_direction_output(S5PV210_GPD0(0), 1);
+	gpio_free(S5PV210_GPD0(0));
 
 	samsung_keypad_set_platdata(&smdkv210_keypad_data);
 	s3c24xx_ts_set_platdata(&s3c_ts_platform);

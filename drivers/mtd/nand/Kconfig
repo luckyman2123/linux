@@ -216,6 +216,33 @@ config MTD_NAND_S3C2410_HWECC
 	  incorrect ECC generation, and if using these, the default of
 	  software ECC is preferable.
 
+
+config MTD_NAND_S3C
+	tristate "NAND Flash support for Samsung S3C and s5p SoCs"
+	depends on MTD_NAND && ( ARCH_S5PC1xx || ARCH_S5PC11x || ARCH_S5PV210 || ARCH_S5PV2xx)
+	help
+	  This enables the NAND flash controller on the S5PC100 and S5PV210
+	  SoCs
+
+	  No board specific support is done by this driver, each board
+	  must advertise a platform_device for the driver to attach.
+
+config MTD_NAND_S3C2410_DEBUG
+	bool "Samsung S3C NAND driver debug"
+	depends on MTD_NAND_S3C
+	help
+	  Enable debugging of the S3C NAND driver
+
+config MTD_NAND_S3C2410_HWECC
+	bool "Samsung S3C NAND Hardware ECC"
+	depends on MTD_NAND_S3C
+	help
+	  Enable the use of the controller's internal ECC generator when
+	  using NAND. Early versions of the chips have had problems with
+	  incorrect ECC generation, and if using these, the default of
+	  software ECC is preferable.
+
+
 config MTD_NAND_NDFC
 	tristate "NDFC NanD Flash Controller"
 	depends on 4xx
